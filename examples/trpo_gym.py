@@ -104,7 +104,7 @@ def select_action(state):
 
 
 def main_loop():
-    """generate mutiliple trajectories that reaches the minimum batch_size"""
+    """generate mutiliple trajectories that reach the minimum batch_size"""
     for i_iter in count():
         memory = Memory()
 
