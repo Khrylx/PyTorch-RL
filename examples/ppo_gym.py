@@ -5,7 +5,7 @@ from utils import *
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
 from torch.autograd import Variable
-from core.trpo import trpo_step
+from core.ppo import ppo_step
 from core.common import estimate_advantages
 
 Tensor = DoubleTensor
@@ -22,14 +22,14 @@ parser.add_argument('--tau', type=float, default=0.97, metavar='G',
                     help='gae (default: 0.97)')
 parser.add_argument('--l2-reg', type=float, default=1e-3, metavar='G',
                     help='l2 regularization regression (default: 1e-3)')
-parser.add_argument('--max-kl', type=float, default=1e-2, metavar='G',
-                    help='max kl value (default: 1e-2)')
-parser.add_argument('--damping', type=float, default=1e-1, metavar='G',
-                    help='damping (default: 1e-1)')
+parser.add_argument('--learning-rate', type=float, default=3e-4, metavar='G',
+                    help='gae (default: 3e-4)')
+parser.add_argument('--clip-epsilon', type=float, default=0.2, metavar='N',
+                    help='clipping epsilon for PPO')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
 parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
-                    help='minimal batch size per TRPO update (default: 2048)')
+                    help='minimal batch size per PPO update (default: 2048)')
 parser.add_argument('--max-iter-num', type=int, default=10000, metavar='N',
                     help='maximal number of main iterations (default: 1)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
@@ -50,29 +50,43 @@ running_reward = ZFilter((1,), demean=False, clip=10)
 
 policy_net = Policy(state_dim, action_dim)
 value_net = Value(state_dim)
-optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=0.01)
-optimizer_value = torch.optim.Adam(value_net.parameters(), lr=0.01)
+optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_rate)
+optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
+
+# optimization epoch number and batch size for PPO
+optim_epochs = 5
+optim_batch_size = 64
 
 
-def update_params(batch):
+def update_params(batch, i_iter):
     states = Tensor(batch.state)
     actions = Tensor(batch.action)
     rewards = Tensor(batch.reward)
     masks = Tensor(batch.mask)
     values = value_net(Variable(states, volatile=True)).data
+    fixed_log_probs = policy_net.get_log_prob(Variable(states, volatile=True), Variable(actions)).data
 
     """get advantage estimation from the trajectories"""
     advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, Tensor)
 
-    """perform TRPO update"""
-    trpo_step(policy_net, value_net, optimizer_value, states, actions, returns, advantages, args.max_kl, args.damping, args.l2_reg)
+    lr_mult = max(1.0 - float(i_iter) / args.max_iter_num, 0)
 
+    """perform mini-batch PPO update"""
+    optim_iter_num = int(math.ceil(states.shape[0] / optim_batch_size))
+    for _ in range(optim_epochs):
+        perm = np.arange(states.shape[0])
+        np.random.shuffle(perm)
+        perm = LongTensor(perm)
+        states, actions, returns, advantages, fixed_log_probs = \
+            states[perm], actions[perm], returns[perm], advantages[perm], fixed_log_probs[perm]
 
-def select_action(state):
-    state = Tensor(state).unsqueeze(0)
-    action_mean, _, action_std = policy_net(Variable(state))
-    action = torch.normal(action_mean, action_std)
-    return action
+        for i in range(optim_iter_num):
+            ind = slice(i * optim_batch_size, min((i + 1) * optim_batch_size, states.shape[0]))
+            states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
+                states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
+
+            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, states_b, actions_b, returns_b,
+                     advantages_b, fixed_log_probs_b, lr_mult, args.learning_rate, args.clip_epsilon, args.l2_reg)
 
 
 def main_loop():
@@ -115,7 +129,7 @@ def main_loop():
 
         reward_batch /= num_episodes
         batch = memory.sample()
-        update_params(batch)
+        update_params(batch, i_iter)
 
         if i_iter % args.log_interval == 0:
             print('Iter {}\tLast reward: {}\tAverage reward {:.2f}'.format(
