@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
+from utils.math import *
 
 
 class Policy(nn.Module):
@@ -24,4 +26,17 @@ class Policy(nn.Module):
         action_std = torch.exp(action_log_std)
 
         return action_mean, action_log_std, action_std
+
+    def get_kl(self, x):
+        mean1, log_std1, std1 = self.forward(x)
+
+        mean0 = Variable(mean1.data)
+        log_std0 = Variable(log_std1.data)
+        std0 = Variable(std1.data)
+        kl = log_std1 - log_std0 + (std0.pow(2) + (mean0 - mean1).pow(2)) / (2.0 * std1.pow(2)) - 0.5
+        return kl.sum(1, keepdim=True)
+
+    def get_log_prob(self, x, actions):
+        action_mean, action_log_std, action_std = self.forward(x)
+        return normal_log_density(actions, action_mean, action_log_std, action_std)
 

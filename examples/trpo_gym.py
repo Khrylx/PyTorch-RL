@@ -29,7 +29,7 @@ parser.add_argument('--damping', type=float, default=1e-1, metavar='G',
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
 parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
-                    help='minimal batch size per TRPO update (default: 10000)')
+                    help='minimal batch size per TRPO update (default: 2048)')
 parser.add_argument('--max-iter-num', type=int, default=10000, metavar='N',
                     help='maximal number of main iterations (default: 1)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
@@ -57,43 +57,13 @@ def update_params(batch):
     actions = Tensor(batch.action)
     rewards = Tensor(batch.reward)
     masks = Tensor(batch.mask)
-    values = value_net(Variable(states))
+    values = value_net(Variable(states, volatile=True)).data
 
     """get advantage estimation from the trajectories"""
-    advantages, returns = estimate_advantages(rewards, masks, values.data, args.gamma, args.tau, Tensor)
+    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, Tensor)
 
-    """update critic"""
-    values_target = Variable(returns)
-    value_loss = (values - values_target).pow(2).mean()
-    # weight decay
-    for param in value_net.parameters():
-        value_loss += param.pow(2).sum() * args.l2_reg
-
-    optimizer_value.zero_grad()
-    value_loss.backward()
-    optimizer_value.step()
-
-    action_means, action_log_stds, action_stds = policy_net(Variable(states, volatile=True))
-    fixed_log_probs = normal_log_density(Variable(actions), action_means, action_log_stds, action_stds).data
-
-    """define the loss function for TRPO"""
-    def get_loss(volatile=False):
-        action_means, action_log_stds, action_stds = policy_net(Variable(states, volatile=volatile))
-        log_probs = normal_log_density(Variable(actions), action_means, action_log_stds, action_stds)
-        action_loss = -Variable(advantages) * torch.exp(log_probs - Variable(fixed_log_probs))
-        return action_loss.mean()
-
-    """define the procedure for calculating the policy's KL"""
-    def get_kl():
-        mean1, log_std1, std1 = policy_net(Variable(states))
-
-        mean0 = Variable(mean1.data)
-        log_std0 = Variable(log_std1.data)
-        std0 = Variable(std1.data)
-        kl = log_std1 - log_std0 + (std0.pow(2) + (mean0 - mean1).pow(2)) / (2.0 * std1.pow(2)) - 0.5
-        return kl.sum(1, keepdim=True)
-
-    trpo_step(policy_net, get_loss, get_kl, args.max_kl, args.damping)
+    """perform TRPO update"""
+    trpo_step(policy_net, value_net, optimizer_value, states, actions, returns, advantages, args.max_kl, args.damping, args.l2_reg)
 
 
 def select_action(state):

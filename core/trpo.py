@@ -38,24 +38,45 @@ def line_search(model, f, x, fullstep, expected_improve_full, max_backtracks=10,
     return False, x
 
 
-def trpo_step(model, get_loss, get_kl, max_kl, damping):
-    loss = get_loss()
-    grads = torch.autograd.grad(loss, model.parameters())
-    loss_grad = torch.cat([grad.view(-1) for grad in grads]).data
+def trpo_step(policy_net, value_net, optimizer_value, states, actions,
+              returns, advantages, max_kl, damping, l2_reg):
 
+    """update critic"""
+    values_target = Variable(returns)
+    values_pred = value_net(Variable(states))
+    value_loss = (values_pred - values_target).pow(2).mean()
+    # weight decay
+    for param in value_net.parameters():
+        value_loss += param.pow(2).sum() * l2_reg
+
+    optimizer_value.zero_grad()
+    value_loss.backward()
+    optimizer_value.step()
+
+    fixed_log_probs = policy_net.get_log_prob(Variable(states, volatile=True), Variable(actions)).data
+    """define the loss function for TRPO"""
+    def get_loss(volatile=False):
+        log_probs = policy_net.get_log_prob(Variable(states, volatile=volatile), Variable(actions))
+        action_loss = -Variable(advantages) * torch.exp(log_probs - Variable(fixed_log_probs))
+        return action_loss.mean()
+
+    """define Hessian*vector for KL"""
     def Fvp(v):
-        kl = get_kl()
+        kl = policy_net.get_kl(Variable(states))
         kl = kl.mean()
 
-        grads = torch.autograd.grad(kl, model.parameters(), create_graph=True)
+        grads = torch.autograd.grad(kl, policy_net.parameters(), create_graph=True)
         flat_grad_kl = torch.cat([grad.view(-1) for grad in grads])
 
         kl_v = (flat_grad_kl * Variable(v)).sum()
-        grads = torch.autograd.grad(kl_v, model.parameters())
+        grads = torch.autograd.grad(kl_v, policy_net.parameters())
         flat_grad_grad_kl = torch.cat([grad.contiguous().view(-1) for grad in grads]).data
 
         return flat_grad_grad_kl + v * damping
 
+    loss = get_loss()
+    grads = torch.autograd.grad(loss, policy_net.parameters())
+    loss_grad = torch.cat([grad.view(-1) for grad in grads]).data
     stepdir = conjugate_gradients(Fvp, -loss_grad, 10)
 
     shs = 0.5 * (stepdir.dot(Fvp(stepdir)))
@@ -63,8 +84,8 @@ def trpo_step(model, get_loss, get_kl, max_kl, damping):
     fullstep = stepdir * lm
     expected_improve = -loss_grad.dot(fullstep)
 
-    prev_params = get_flat_params_from(model)
-    success, new_params = line_search(model, get_loss, prev_params, fullstep,expected_improve)
-    set_flat_params_to(model, new_params)
+    prev_params = get_flat_params_from(policy_net)
+    success, new_params = line_search(policy_net, get_loss, prev_params, fullstep,expected_improve)
+    set_flat_params_to(policy_net, new_params)
 
     return success
