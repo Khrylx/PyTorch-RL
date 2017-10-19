@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class Value(nn.Module):
     def __init__(self, num_inputs):
-        super(Value, self).__init__()
+        super().__init__()
         self.affine1 = nn.Linear(num_inputs, 64)
         self.affine2 = nn.Linear(64, 64)
 

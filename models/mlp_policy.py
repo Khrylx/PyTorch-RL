@@ -7,7 +7,7 @@ from utils.math import *
 
 class Policy(nn.Module):
     def __init__(self, state_dim, action_dim):
-        super(Policy, self).__init__()
+        super().__init__()
         self.affine1 = nn.Linear(state_dim, 64)
         self.affine2 = nn.Linear(64, 64)
 
@@ -30,7 +30,7 @@ class Policy(nn.Module):
     def select_action(self, x):
         action_mean, _, action_std = self.forward(x)
         action = torch.normal(action_mean, action_std)
-        return action
+        return action.data
 
     def get_kl(self, x):
         mean1, log_std1, std1 = self.forward(x)

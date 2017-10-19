@@ -50,6 +50,10 @@ running_reward = ZFilter((1,), demean=False, clip=10)
 
 policy_net = Policy(state_dim, action_dim)
 value_net = Value(state_dim)
+if use_gpu:
+    policy_net = policy_net.cuda()
+    value_net = value_net.cuda()
+
 optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_rate)
 optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
 
@@ -90,7 +94,7 @@ def update_params(batch, i_iter):
 
 
 def main_loop():
-    """generate mutiliple trajectories that reach the minimum batch_size"""
+    """generate multiple trajectories that reach the minimum batch_size"""
     for i_iter in count():
         memory = Memory()
 
@@ -106,7 +110,7 @@ def main_loop():
             for t in range(10000):
                 state_var = Variable(Tensor(state).unsqueeze(0))
                 action = policy_net.select_action(state_var)
-                action = action.data[0].numpy().astype(np.float64)
+                action = action[0].numpy().astype(np.float64)
                 next_state, reward, done, _ = env.step(action)
                 reward_episode += reward
                 next_state = running_state(next_state)
