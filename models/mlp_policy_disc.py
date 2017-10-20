@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -30,7 +29,7 @@ class DiscretePolicy(nn.Module):
     def get_kl(self, x):
         action_prob1 = self.forward(x)
         action_prob0 = Variable(action_prob1.data)
-        kl = action_prob0 * (action_prob0 - action_prob1)
+        kl = action_prob0 * (torch.log(action_prob0) - torch.log(action_prob1))
         return kl.sum(1, keepdim=True)
 
     def get_log_prob(self, x, actions):

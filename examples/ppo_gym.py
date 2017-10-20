@@ -4,6 +4,7 @@ from itertools import count
 from utils import *
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
+from models.mlp_policy_disc import DiscretePolicy
 from torch.autograd import Variable
 from core.ppo import ppo_step
 from core.common import estimate_advantages
@@ -12,7 +13,7 @@ Tensor = DoubleTensor
 torch.set_default_tensor_type('torch.DoubleTensor')
 
 parser = argparse.ArgumentParser(description='PyTorch TRPO example')
-parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
+parser.add_argument('--env-name', default="CartPole-v0", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
@@ -43,12 +44,17 @@ if use_gpu:
     torch.cuda.manual_seed_all(args.seed)
 
 state_dim = env.observation_space.shape[0]
-action_dim = env.action_space.shape[0]
+is_disc_action = len(env.action_space.shape) == 0
+ActionTensor = LongTensor if is_disc_action else DoubleTensor
 
 running_state = ZFilter((state_dim,), clip=5)
 running_reward = ZFilter((1,), demean=False, clip=10)
 
-policy_net = Policy(state_dim, action_dim)
+"""define actor and critic"""
+if is_disc_action:
+    policy_net = DiscretePolicy(state_dim, env.action_space.n)
+else:
+    policy_net = Policy(state_dim, env.action_space.shape[0])
 value_net = Value(state_dim)
 if use_gpu:
     policy_net = policy_net.cuda()
@@ -64,7 +70,7 @@ optim_batch_size = 64
 
 def update_params(batch, i_iter):
     states = Tensor(batch.state)
-    actions = Tensor(batch.action)
+    actions = ActionTensor(batch.action)
     rewards = Tensor(batch.reward)
     masks = Tensor(batch.mask)
     values = value_net(Variable(states, volatile=True)).data
@@ -109,8 +115,8 @@ def main_loop():
 
             for t in range(10000):
                 state_var = Variable(Tensor(state).unsqueeze(0))
-                action = policy_net.select_action(state_var)
-                action = action[0].numpy().astype(np.float64)
+                action = policy_net.select_action(state_var)[0].numpy()
+                action = int(action) if is_disc_action else action.astype(np.float64)
                 next_state, reward, done, _ = env.step(action)
                 reward_episode += reward
                 next_state = running_state(next_state)
