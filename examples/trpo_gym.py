@@ -1,6 +1,10 @@
 import argparse
 import gym
 from itertools import count
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from utils import *
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
@@ -94,7 +98,7 @@ def main_loop():
 
             for t in range(10000):
                 state_var = Variable(Tensor(state).unsqueeze(0))
-                action = policy_net.select_action(state_var)[0].numpy()
+                action = policy_net.select_action(state_var)[0].cpu().numpy()
                 action = int(action) if is_disc_action else action.astype(np.float64)
                 next_state, reward, done, _ = env.step(action)
                 reward_episode += reward
