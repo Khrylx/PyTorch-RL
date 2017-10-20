@@ -1,8 +1,8 @@
 import argparse
 import gym
-from itertools import count
 import os
 import sys
+import pickle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils import *
@@ -35,10 +35,12 @@ parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
 parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
                     help='minimal batch size per PPO update (default: 2048)')
-parser.add_argument('--max-iter-num', type=int, default=10000, metavar='N',
-                    help='maximal number of main iterations (default: 1)')
+parser.add_argument('--max-iter-num', type=int, default=1000, metavar='N',
+                    help='maximal number of main iterations (default: 1000)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
+parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
+                    help="interval between saving model (default: 0, means don't save)")
 args = parser.parse_args()
 
 env = gym.make(args.env_name)
@@ -51,8 +53,8 @@ state_dim = env.observation_space.shape[0]
 is_disc_action = len(env.action_space.shape) == 0
 ActionTensor = LongTensor if is_disc_action else DoubleTensor
 
-running_state = ZFilter((state_dim,), clip=5)
-running_reward = ZFilter((1,), demean=False, clip=10)
+# running_state = ZFilter((state_dim,), clip=5)
+# running_reward = ZFilter((1,), demean=False, clip=10)
 
 """define actor and critic"""
 if is_disc_action:
@@ -105,7 +107,7 @@ def update_params(batch, i_iter):
 
 def main_loop():
     """generate multiple trajectories that reach the minimum batch_size"""
-    for i_iter in count():
+    for i_iter in range(args.max_iter_num):
         memory = Memory()
 
         num_steps = 0
@@ -114,7 +116,7 @@ def main_loop():
 
         while num_steps < args.min_batch_size:
             state = env.reset()
-            state = running_state(state)
+            # state = running_state(state)
             reward_episode = 0
 
             for t in range(10000):
@@ -123,7 +125,7 @@ def main_loop():
                 action = int(action) if is_disc_action else action.astype(np.float64)
                 next_state, reward, done, _ = env.step(action)
                 reward_episode += reward
-                next_state = running_state(next_state)
+                # next_state = running_state(next_state)
 
                 mask = 0 if done else 1
 
@@ -146,8 +148,11 @@ def main_loop():
         update_params(batch, i_iter)
 
         if i_iter % args.log_interval == 0:
-            print('Iter {}\tLast reward: {}\tAverage reward {:.2f}'.format(
+            print('Iter {}\tLast reward: {:.2f}\tAverage reward {:.2f}'.format(
                 i_iter, reward_episode, reward_batch))
+
+        if args.save_model_interval > 0 and i_iter % args.save_model_interval == 0:
+            pickle.dump((policy_net, value_net), open('../assets/learned_models/{}_ppo.p'.format(args.env_name), 'wb'))
 
 
 main_loop()

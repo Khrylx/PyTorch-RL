@@ -7,10 +7,10 @@ from utils.math import *
 class DiscretePolicy(nn.Module):
     def __init__(self, state_dim, action_num):
         super().__init__()
-        self.affine1 = nn.Linear(state_dim, 64)
-        self.affine2 = nn.Linear(64, 64)
+        self.affine1 = nn.Linear(state_dim, 128)
+        self.affine2 = nn.Linear(128, 128)
 
-        self.action_head = nn.Linear(64, action_num)
+        self.action_head = nn.Linear(128, action_num)
         self.action_head.weight.data.mul_(0.1)
         self.action_head.bias.data.mul_(0.0)
 

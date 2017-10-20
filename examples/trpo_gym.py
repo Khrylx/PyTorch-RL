@@ -1,8 +1,8 @@
 import argparse
 import gym
-from itertools import count
 import os
 import sys
+import pickle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils import *
@@ -35,10 +35,12 @@ parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
 parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
                     help='minimal batch size per TRPO update (default: 2048)')
-parser.add_argument('--max-iter-num', type=int, default=10000, metavar='N',
-                    help='maximal number of main iterations (default: 1)')
+parser.add_argument('--max-iter-num', type=int, default=5000, metavar='N',
+                    help='maximal number of main iterations (default: 5000)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
+parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
+                    help="interval between saving model (default: 0, means don't save)")
 args = parser.parse_args()
 
 env = gym.make(args.env_name)
@@ -84,7 +86,7 @@ def update_params(batch):
 
 def main_loop():
     """generate multiple trajectories that reach the minimum batch_size"""
-    for i_iter in count():
+    for i_iter in range(args.max_iter_num):
         memory = Memory()
 
         num_steps = 0
@@ -125,8 +127,11 @@ def main_loop():
         update_params(batch)
 
         if i_iter % args.log_interval == 0:
-            print('Iter {}\tLast reward: {}\tAverage reward {:.2f}'.format(
+            print('Iter {}\tLast reward: {:.2f}\tAverage reward {:.2f}'.format(
                 i_iter, reward_episode, reward_batch))
+
+        if args.save_model_interval > 0 and i_iter % args.save_model_interval == 0:
+            pickle.dump((policy_net, value_net), open('../assets/learned_models/{}_trpo.p'.format(args.env_name), 'wb'))
 
 
 main_loop()
