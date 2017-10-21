@@ -33,10 +33,10 @@ parser.add_argument('--clip-epsilon', type=float, default=0.2, metavar='N',
                     help='clipping epsilon for PPO')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=1e4, metavar='N',
-                    help='minimal batch size per PPO update (default: 1e4)')
-parser.add_argument('--max-iter-num', type=int, default=100, metavar='N',
-                    help='maximal number of main iterations (default: 100)')
+parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
+                    help='minimal batch size per PPO update (default: 2048)')
+parser.add_argument('--max-iter-num', type=int, default=500, metavar='N',
+                    help='maximal number of main iterations (default: 500)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
 parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
@@ -70,7 +70,7 @@ optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_ra
 optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
 
 # optimization epoch number and batch size for PPO
-optim_epochs = 5
+optim_epochs = 10
 optim_batch_size = 64
 
 
@@ -101,7 +101,7 @@ def update_params(batch, i_iter):
             states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
                 states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
 
-            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 3, states_b, actions_b, returns_b,
+            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
                      advantages_b, fixed_log_probs_b, lr_mult, args.learning_rate, args.clip_epsilon, args.l2_reg)
 
 
