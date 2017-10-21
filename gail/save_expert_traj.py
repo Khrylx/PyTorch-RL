@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(description='PyTorch TRPO example')
 parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--model-path', metavar='G',
-                    help='name of the environment to run')
+                    help='name of the expert model')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--seed', type=int, default=1, metavar='N',

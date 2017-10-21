@@ -1,4 +1,5 @@
 from collections import namedtuple
+import random
 
 # Taken from
 # https://github.com/pytorch/tutorials/blob/master/Reinforcement%20(Q-)Learning%20with%20PyTorch.ipynb
@@ -15,8 +16,12 @@ class Memory(object):
         """Saves a transition."""
         self.memory.append(Transition(*args))
 
-    def sample(self):
-        return Transition(*zip(*self.memory))
+    def sample(self, batch_size=None):
+        if batch_size is None:
+            return Transition(*zip(*self.memory))
+        else:
+            random_batch = random.sample(self.memory, batch_size)
+            return Transition(*zip(*random_batch))
 
     def __len__(self):
         return len(self.memory)
