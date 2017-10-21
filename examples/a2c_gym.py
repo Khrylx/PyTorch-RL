@@ -127,10 +127,10 @@ def main_loop():
         update_params(batch)
 
         if i_iter % args.log_interval == 0:
-            print('Iter {}\tLast reward: {:.2f}\tAverage reward {:.2f}'.format(
+            print('Iter {}\t  Last reward: {:.2f}\t  Average reward {:.2f}'.format(
                 i_iter, reward_episode, reward_batch))
 
-        if args.save_model_interval > 0 and i_iter % args.save_model_interval == 0:
+        if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             pickle.dump((policy_net, value_net), open('../assets/learned_models/{}_a2c.p'.format(args.env_name), 'wb'))
 
 

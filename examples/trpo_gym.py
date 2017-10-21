@@ -53,8 +53,8 @@ state_dim = env.observation_space.shape[0]
 is_disc_action = len(env.action_space.shape) == 0
 ActionTensor = LongTensor if is_disc_action else DoubleTensor
 
-running_state = ZFilter((state_dim,), clip=5)
-running_reward = ZFilter((1,), demean=False, clip=10)
+# running_state = ZFilter((state_dim,), clip=5)
+# running_reward = ZFilter((1,), demean=False, clip=10)
 
 """define actor and critic"""
 if is_disc_action:
@@ -66,8 +66,8 @@ if use_gpu:
     policy_net = policy_net.cuda()
     value_net = value_net.cuda()
 
-optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=0.01)
-optimizer_value = torch.optim.Adam(value_net.parameters(), lr=0.01)
+optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=1e-3)
+optimizer_value = torch.optim.Adam(value_net.parameters(), lr=1e-3)
 
 
 def update_params(batch):
@@ -95,7 +95,7 @@ def main_loop():
 
         while num_steps < args.min_batch_size:
             state = env.reset()
-            state = running_state(state)
+            # state = running_state(state)
             reward_episode = 0
 
             for t in range(10000):
@@ -104,7 +104,7 @@ def main_loop():
                 action = int(action) if is_disc_action else action.astype(np.float64)
                 next_state, reward, done, _ = env.step(action)
                 reward_episode += reward
-                next_state = running_state(next_state)
+                # next_state = running_state(next_state)
 
                 mask = 0 if done else 1
 
@@ -127,10 +127,10 @@ def main_loop():
         update_params(batch)
 
         if i_iter % args.log_interval == 0:
-            print('Iter {}\tLast reward: {:.2f}\tAverage reward {:.2f}'.format(
+            print('Iter {}\t  Last reward: {:.2f}\t  Average reward {:.2f}'.format(
                 i_iter, reward_episode, reward_batch))
 
-        if args.save_model_interval > 0 and i_iter % args.save_model_interval == 0:
+        if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             pickle.dump((policy_net, value_net), open('../assets/learned_models/{}_trpo.p'.format(args.env_name), 'wb'))
 
 
