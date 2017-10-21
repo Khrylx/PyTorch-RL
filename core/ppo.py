@@ -2,7 +2,7 @@ import torch
 from torch.autograd import Variable
 
 
-def ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, states, actions,
+def ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, optim_value_iternum, states, actions,
              returns, advantages, fixed_log_probs, lr_mult, lr, clip_epsilon, l2_reg):
 
     optimizer_policy.lr = lr * lr_mult
@@ -11,14 +11,15 @@ def ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, states, a
 
     """update critic"""
     values_target = Variable(returns)
-    values_pred = value_net(Variable(states))
-    value_loss = (values_pred - values_target).pow(2).mean()
-    # weight decay
-    for param in value_net.parameters():
-        value_loss += param.pow(2).sum() * l2_reg
-    optimizer_value.zero_grad()
-    value_loss.backward()
-    optimizer_value.step()
+    for _ in range(optim_value_iternum):
+        values_pred = value_net(Variable(states))
+        value_loss = (values_pred - values_target).pow(2).mean()
+        # weight decay
+        for param in value_net.parameters():
+            value_loss += param.pow(2).sum() * l2_reg
+        optimizer_value.zero_grad()
+        value_loss.backward()
+        optimizer_value.step()
 
     """update policy"""
     advantages_var = Variable(advantages)

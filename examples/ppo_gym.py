@@ -21,10 +21,10 @@ parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
-parser.add_argument('--gamma', type=float, default=0.995, metavar='G',
-                    help='discount factor (default: 0.995)')
-parser.add_argument('--tau', type=float, default=0.97, metavar='G',
-                    help='gae (default: 0.97)')
+parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
+                    help='discount factor (default: 0.99)')
+parser.add_argument('--tau', type=float, default=0.95, metavar='G',
+                    help='gae (default: 0.95)')
 parser.add_argument('--l2-reg', type=float, default=1e-3, metavar='G',
                     help='l2 regularization regression (default: 1e-3)')
 parser.add_argument('--learning-rate', type=float, default=3e-4, metavar='G',
@@ -33,10 +33,10 @@ parser.add_argument('--clip-epsilon', type=float, default=0.2, metavar='N',
                     help='clipping epsilon for PPO')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
-                    help='minimal batch size per PPO update (default: 2048)')
-parser.add_argument('--max-iter-num', type=int, default=1000, metavar='N',
-                    help='maximal number of main iterations (default: 1000)')
+parser.add_argument('--min-batch-size', type=int, default=1e4, metavar='N',
+                    help='minimal batch size per PPO update (default: 1e4)')
+parser.add_argument('--max-iter-num', type=int, default=100, metavar='N',
+                    help='maximal number of main iterations (default: 100)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
 parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
@@ -101,7 +101,7 @@ def update_params(batch, i_iter):
             states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
                 states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
 
-            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, states_b, actions_b, returns_b,
+            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 3, states_b, actions_b, returns_b,
                      advantages_b, fixed_log_probs_b, lr_mult, args.learning_rate, args.clip_epsilon, args.l2_reg)
 
 

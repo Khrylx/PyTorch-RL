@@ -1,5 +1,6 @@
 import numpy as np
 from torch.autograd import Variable
+import scipy.optimize
 from utils import *
 
 
@@ -38,21 +39,31 @@ def line_search(model, f, x, fullstep, expected_improve_full, max_backtracks=10,
     return False, x
 
 
-def trpo_step(policy_net, value_net, optimizer_value, states, actions,
-              returns, advantages, max_kl, damping, l2_reg):
+def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_kl, damping, l2_reg):
 
     """update critic"""
     values_target = Variable(returns)
-    values_pred = value_net(Variable(states))
-    value_loss = (values_pred - values_target).pow(2).mean()
-    # weight decay
-    for param in value_net.parameters():
-        value_loss += param.pow(2).sum() * l2_reg
 
-    optimizer_value.zero_grad()
-    value_loss.backward()
-    optimizer_value.step()
+    def get_value_loss(flat_params):
+        set_flat_params_to(value_net, torch.Tensor(flat_params))
+        for param in value_net.parameters():
+            if param.grad is not None:
+                param.grad.data.fill_(0)
+        values_pred = value_net(Variable(states))
+        value_loss = (values_pred - values_target).pow(2).mean()
 
+        # weight decay
+        for param in value_net.parameters():
+            value_loss += param.pow(2).sum() * l2_reg
+        value_loss.backward()
+        return value_loss.data.double().numpy()[0], get_flat_grad_from(value_net).data.double().numpy()
+
+    flat_params, _, opt_info = scipy.optimize.fmin_l_bfgs_b(get_value_loss,
+                                                            get_flat_params_from(value_net).double().numpy(),
+                                                            maxiter=25)
+    set_flat_params_to(value_net, torch.Tensor(flat_params))
+
+    """update policy"""
     fixed_log_probs = policy_net.get_log_prob(Variable(states, volatile=True), Variable(actions)).data
     """define the loss function for TRPO"""
     def get_loss(volatile=False):
@@ -85,7 +96,7 @@ def trpo_step(policy_net, value_net, optimizer_value, states, actions,
     expected_improve = -loss_grad.dot(fullstep)
 
     prev_params = get_flat_params_from(policy_net)
-    success, new_params = line_search(policy_net, get_loss, prev_params, fullstep,expected_improve)
+    success, new_params = line_search(policy_net, get_loss, prev_params, fullstep, expected_improve)
     set_flat_params_to(policy_net, new_params)
 
     return success

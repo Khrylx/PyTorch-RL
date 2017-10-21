@@ -21,22 +21,22 @@ parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
-parser.add_argument('--gamma', type=float, default=0.995, metavar='G',
-                    help='discount factor (default: 0.995)')
-parser.add_argument('--tau', type=float, default=0.97, metavar='G',
-                    help='gae (default: 0.97)')
+parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
+                    help='discount factor (default: 0.99)')
+parser.add_argument('--tau', type=float, default=0.95, metavar='G',
+                    help='gae (default: 0.95)')
 parser.add_argument('--l2-reg', type=float, default=1e-3, metavar='G',
                     help='l2 regularization regression (default: 1e-3)')
 parser.add_argument('--max-kl', type=float, default=1e-2, metavar='G',
                     help='max kl value (default: 1e-2)')
-parser.add_argument('--damping', type=float, default=1e-1, metavar='G',
-                    help='damping (default: 1e-1)')
+parser.add_argument('--damping', type=float, default=1e-2, metavar='G',
+                    help='damping (default: 1e-2)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
-                    help='minimal batch size per TRPO update (default: 2048)')
-parser.add_argument('--max-iter-num', type=int, default=5000, metavar='N',
-                    help='maximal number of main iterations (default: 5000)')
+parser.add_argument('--min-batch-size', type=int, default=1e4, metavar='N',
+                    help='minimal batch size per TRPO update (default: 1e4)')
+parser.add_argument('--max-iter-num', type=int, default=100, metavar='N',
+                    help='maximal number of main iterations (default: 100)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
 parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
@@ -67,7 +67,6 @@ if use_gpu:
     value_net = value_net.cuda()
 
 optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=1e-3)
-optimizer_value = torch.optim.Adam(value_net.parameters(), lr=1e-3)
 
 
 def update_params(batch):
@@ -81,7 +80,7 @@ def update_params(batch):
     advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, Tensor)
 
     """perform TRPO update"""
-    trpo_step(policy_net, value_net, optimizer_value, states, actions, returns, advantages, args.max_kl, args.damping, args.l2_reg)
+    trpo_step(policy_net, value_net, states, actions, returns, advantages, args.max_kl, args.damping, args.l2_reg)
 
 
 def main_loop():
