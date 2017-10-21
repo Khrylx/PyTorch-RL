@@ -65,10 +65,10 @@ def main_loop():
 
             state = next_state
 
+        print('Episode {}\t reward: {:.2f}'.format(i_episode, reward_episode))
+
         if num_steps >= args.max_expert_state_num:
             break
-
-        print('Episode {}\t reward: {:.2f}'.format(i_episode, reward_episode))
 
 
 main_loop()
