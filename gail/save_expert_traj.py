@@ -35,6 +35,7 @@ is_disc_action = len(env.action_space.shape) == 0
 state_dim = env.observation_space.shape[0]
 
 policy_net = pickle.load(open(args.model_path, "rb"))[0]
+expert_traj = []
 
 
 def main_loop():
@@ -47,12 +48,15 @@ def main_loop():
         reward_episode = 0
 
         for t in range(10000):
-            state_var = Variable(Tensor(state).unsqueeze(0))
+            state_var = Variable(Tensor(state).unsqueeze(0),  volatile=True)
+            # action = policy_net(state_var)[0].data[0].cpu().numpy()
             action = policy_net.select_action(state_var)[0].cpu().numpy()
             action = int(action) if is_disc_action else action.astype(np.float64)
             next_state, reward, done, _ = env.step(action)
             reward_episode += reward
             num_steps += 1
+
+            expert_traj.append(np.hstack([state, action]))
 
             if args.render:
                 env.render()
@@ -68,3 +72,5 @@ def main_loop():
 
 
 main_loop()
+expert_traj = np.stack(expert_traj)
+pickle.dump(expert_traj, open('../assets/expert_traj/{}_expert_traj.p'.format(args.env_name), 'wb'))

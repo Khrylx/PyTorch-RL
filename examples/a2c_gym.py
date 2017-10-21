@@ -95,7 +95,7 @@ def main_loop():
             reward_episode = 0
 
             for t in range(10000):
-                state_var = Variable(Tensor(state).unsqueeze(0))
+                state_var = Variable(Tensor(state).unsqueeze(0), volatile=True)
                 action = policy_net.select_action(state_var)[0].cpu().numpy()
                 action = int(action) if is_disc_action else action.astype(np.float64)
                 next_state, reward, done, _ = env.step(action)

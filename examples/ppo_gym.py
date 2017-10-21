@@ -17,7 +17,7 @@ Tensor = DoubleTensor
 torch.set_default_tensor_type('torch.DoubleTensor')
 
 parser = argparse.ArgumentParser(description='PyTorch PPO example')
-parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
+parser.add_argument('--env-name', default="Swimmer-v1", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
@@ -70,7 +70,7 @@ optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_ra
 optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
 
 # optimization epoch number and batch size for PPO
-optim_epochs = 10
+optim_epochs = 5
 optim_batch_size = 64
 
 
@@ -120,7 +120,7 @@ def main_loop():
             reward_episode = 0
 
             for t in range(10000):
-                state_var = Variable(Tensor(state).unsqueeze(0))
+                state_var = Variable(Tensor(state).unsqueeze(0), volatile=True)
                 action = policy_net.select_action(state_var)[0].cpu().numpy()
                 action = int(action) if is_disc_action else action.astype(np.float64)
                 next_state, reward, done, _ = env.step(action)
