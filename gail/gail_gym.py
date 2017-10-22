@@ -18,7 +18,7 @@ from core.common import estimate_advantages
 Tensor = DoubleTensor
 torch.set_default_tensor_type('torch.DoubleTensor')
 
-parser = argparse.ArgumentParser(description='PyTorch PPO example')
+parser = argparse.ArgumentParser(description='PyTorch GAIL example')
 parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--expert-traj-path', metavar='G',
@@ -93,7 +93,6 @@ def update_params(batch, i_iter):
     masks = Tensor(batch.mask)
     values = value_net(Variable(states, volatile=True)).data
     fixed_log_probs = policy_net.get_log_prob(Variable(states, volatile=True), Variable(actions)).data
-    expert_state_actions = Tensor(expert_traj[np.random.choice(expert_traj.shape[0], states.shape[0], replace=False), :])
 
     """get advantage estimation from the trajectories"""
     advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, Tensor)
@@ -106,13 +105,15 @@ def update_params(batch, i_iter):
         perm = np.arange(states.shape[0])
         np.random.shuffle(perm)
         perm = LongTensor(perm.tolist())
-        states, actions, returns, advantages, fixed_log_probs, expert_state_actions = \
-            states[perm], actions[perm], returns[perm], advantages[perm], fixed_log_probs[perm], expert_state_actions[perm]
+        states, actions, returns, advantages, fixed_log_probs = \
+            states[perm], actions[perm], returns[perm], advantages[perm], fixed_log_probs[perm]
 
         for i in range(optim_iter_num):
             ind = slice(i * optim_batch_size, min((i + 1) * optim_batch_size, states.shape[0]))
-            states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b, expert_state_actions_b = \
-                states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind], expert_state_actions[ind]
+            states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
+                states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
+            expert_state_actions_b = Tensor(expert_traj[np.random.choice(expert_traj.shape[0],
+                                                                         states_b.shape[0], replace=False), :])
 
             """update discriminator"""
             for _ in range(3):
