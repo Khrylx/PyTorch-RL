@@ -9,6 +9,9 @@ This repository contains:
 * [Proximal Policy Optimization (PPO)](https://arxiv.org/pdf/1707.06347.pdf) -> [examples/ppo_gym.py](https://github.com/Khrylx/PyTorch-RL/blob/master/examples/ppo_gym.py)
 * [Synchronous A3C (A2C)](https://arxiv.org/pdf/1602.01783.pdf) -> [examples/a2c_gym.py](https://github.com/Khrylx/PyTorch-RL/blob/master/examples/a2c_gym.py)
 
+### Example
+* python examples/ppo_gym.py --env-name Hopper-v1
+
 ### Reference
 * [ikostrikov/pytorch-trpo](https://github.com/ikostrikov/pytorch-trpo)
 * [openai/baselines](https://github.com/openai/baselines)
