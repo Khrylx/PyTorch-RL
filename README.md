@@ -15,4 +15,5 @@ This repository contains:
 
 
 ## Generative Adversarial Imitation Learning (GAIL)
-* [gail/gail_gym.py](https://github.com/Khrylx/PyTorch-RL/blob/master/gail/gail_gym.py)
+### Example
+* python gail/gail_gym.py --env-name Reacher-v1 --expert-traj-path ../assets/expert_traj/Reacher-v1_expert_traj.p
