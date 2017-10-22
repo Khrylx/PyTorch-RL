@@ -76,7 +76,7 @@ if use_gpu:
 
 optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_rate)
 optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
-optimizer_discrim = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
+optimizer_discrim = torch.optim.Adam(discrim_net.parameters(), lr=args.learning_rate)
 
 # optimization epoch number and batch size for PPO
 optim_epochs = 5
@@ -115,7 +115,7 @@ def update_params(batch, i_iter):
                 states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind], expert_state_actions[ind]
 
             """update discriminator"""
-            for _ in range(1):
+            for _ in range(3):
                 g_o = discrim_net(Variable(torch.cat([states_b, actions_b], 1)))
                 e_o = discrim_net(Variable(expert_state_actions_b))
                 optimizer_discrim.zero_grad()
