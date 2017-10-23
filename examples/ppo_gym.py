@@ -19,6 +19,8 @@ torch.set_default_tensor_type('torch.DoubleTensor')
 parser = argparse.ArgumentParser(description='PyTorch PPO example')
 parser.add_argument('--env-name', default="Reacher-v1", metavar='G',
                     help='name of the environment to run')
+parser.add_argument('--model-path', metavar='G',
+                    help='path of pre-trained model')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
@@ -57,11 +59,14 @@ ActionTensor = LongTensor if is_disc_action else DoubleTensor
 # running_reward = ZFilter((1,), demean=False, clip=10)
 
 """define actor and critic"""
-if is_disc_action:
-    policy_net = DiscretePolicy(state_dim, env.action_space.n)
+if args.model_path is None:
+    if is_disc_action:
+        policy_net = DiscretePolicy(state_dim, env.action_space.n)
+    else:
+        policy_net = Policy(state_dim, env.action_space.shape[0])
+    value_net = Value(state_dim)
 else:
-    policy_net = Policy(state_dim, env.action_space.shape[0])
-value_net = Value(state_dim)
+    policy_net, value_net = pickle.load(open(args.model_path, "rb"))
 if use_gpu:
     policy_net = policy_net.cuda()
     value_net = value_net.cuda()
