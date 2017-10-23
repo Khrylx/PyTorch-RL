@@ -5,20 +5,30 @@ from utils.math import *
 
 
 class DiscretePolicy(nn.Module):
-    def __init__(self, state_dim, action_num):
+    def __init__(self, state_dim, action_num, hidden_size=(128, 128), activation='tanh'):
         super().__init__()
-        self.affine1 = nn.Linear(state_dim, 128)
-        self.affine2 = nn.Linear(128, 128)
+        if activation == 'tanh':
+            self.activation = F.tanh
+        elif activation == 'relu':
+            self.activation = F.relu
+        elif activation == 'sigmoid':
+            self.activation = F.sigmoid
 
-        self.action_head = nn.Linear(128, action_num)
+        self.affine_layers = nn.ModuleList()
+        last_dim = state_dim
+        for nh in hidden_size:
+            self.affine_layers.append(nn.Linear(last_dim, nh))
+            last_dim = nh
+
+        self.action_head = nn.Linear(last_dim, action_num)
         self.action_head.weight.data.mul_(0.1)
         self.action_head.bias.data.mul_(0.0)
 
     def forward(self, x):
-        x = F.relu(self.affine1(x))
-        x = F.relu(self.affine2(x))
-        action_prob = F.softmax(self.action_head(x))
+        for affine in self.affine_layers:
+            x = self.activation(affine(x))
 
+        action_prob = F.softmax(self.action_head(x))
         return action_prob
 
     def select_action(self, x):
