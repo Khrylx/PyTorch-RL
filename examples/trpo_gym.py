@@ -23,6 +23,8 @@ parser.add_argument('--model-path', metavar='G',
                     help='path of pre-trained model')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
+parser.add_argument('--log-std', type=float, default=0, metavar='G',
+                    help='discount factor (default: 0)')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                     help='discount factor (default: 0.99)')
 parser.add_argument('--tau', type=float, default=0.95, metavar='G',
@@ -63,15 +65,13 @@ if args.model_path is None:
     if is_disc_action:
         policy_net = DiscretePolicy(state_dim, env.action_space.n)
     else:
-        policy_net = Policy(state_dim, env.action_space.shape[0])
+        policy_net = Policy(state_dim, env.action_space.shape[0], log_std=args.log_std)
     value_net = Value(state_dim)
 else:
     policy_net, value_net = pickle.load(open(args.model_path, "rb"))
 if use_gpu:
     policy_net = policy_net.cuda()
     value_net = value_net.cuda()
-
-optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=1e-3)
 
 
 def update_params(batch):

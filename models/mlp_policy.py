@@ -5,7 +5,7 @@ from utils.math import *
 
 
 class Policy(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_size=(128, 128), activation='tanh'):
+    def __init__(self, state_dim, action_dim, hidden_size=(128, 128), activation='tanh', log_std=0):
         super().__init__()
         if activation == 'tanh':
             self.activation = F.tanh
@@ -24,7 +24,7 @@ class Policy(nn.Module):
         self.action_mean.weight.data.mul_(0.1)
         self.action_mean.bias.data.mul_(0.0)
 
-        self.action_log_std = nn.Parameter(torch.zeros(1, action_dim))
+        self.action_log_std = nn.Parameter(torch.ones(1, action_dim) * log_std)
 
     def forward(self, x):
         for affine in self.affine_layers:
