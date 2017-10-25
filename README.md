@@ -19,4 +19,4 @@ This repository contains:
 
 ## Generative Adversarial Imitation Learning (GAIL)
 ### Example
-* python gail/gail_gym.py --env-name Reacher-v1 --expert-traj-path ../assets/expert_traj/Reacher-v1_expert_traj.p
+* python gail/gail_gym.py --env-name Hopper-v1 --expert-traj-path ../assets/expert_traj/Hopper-v1_expert_traj.p

@@ -83,7 +83,7 @@ optim_epochs = 5
 optim_batch_size = 64
 
 # load trajectory
-expert_traj = pickle.load(open(args.expert_traj_path, "rb"))
+expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
 
 
 def update_params(batch, i_iter):
@@ -142,7 +142,7 @@ def main_loop():
 
         while num_steps < args.min_batch_size:
             state = env.reset()
-            # state = running_state(state)
+            state = running_state(state)
             true_reward_episode = 0
             expert_reward_episode = 0
 
@@ -152,7 +152,7 @@ def main_loop():
                 action = int(action) if is_disc_action else action.astype(np.float64)
                 next_state, true_reward, done, _ = env.step(action)
                 true_reward_episode += true_reward
-                # next_state = running_state(next_state)
+                next_state = running_state(next_state)
 
                 state_action = Tensor(np.hstack([state, action]))
                 expert_reward = -math.log(discrim_net(Variable(state_action, volatile=True)).data.numpy()[0])
@@ -185,7 +185,7 @@ def main_loop():
                 i_iter, expert_reward_batch, true_reward_batch))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
-            pickle.dump((policy_net, value_net), open('../assets/learned_models/{}_ppo.p'.format(args.env_name), 'wb'))
+            pickle.dump((policy_net, value_net), open('../assets/learned_models/{}_gail.p'.format(args.env_name), 'wb'))
 
 
 main_loop()
