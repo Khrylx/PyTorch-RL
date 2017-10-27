@@ -12,7 +12,7 @@ from torch.autograd import Variable
 Tensor = DoubleTensor
 torch.set_default_tensor_type('torch.DoubleTensor')
 
-parser = argparse.ArgumentParser(description='PyTorch TRPO example')
+parser = argparse.ArgumentParser(description='Save expert trajectory')
 parser.add_argument('--env-name', default="Reacher-v1", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--model-path', metavar='G',
