@@ -32,7 +32,7 @@ parser.add_argument('--tau', type=float, default=0.95, metavar='G',
 parser.add_argument('--l2-reg', type=float, default=1e-3, metavar='G',
                     help='l2 regularization regression (default: 1e-3)')
 parser.add_argument('--learning-rate', type=float, default=3e-4, metavar='G',
-                    help='gae (default: 3e-4)')
+                    help='learning rate (default: 3e-4)')
 parser.add_argument('--clip-epsilon', type=float, default=0.2, metavar='N',
                     help='clipping epsilon for PPO')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
