@@ -156,7 +156,7 @@ def main_loop():
         update_params(batch, i_iter)
 
         if i_iter % args.log_interval == 0:
-            print('Iter {}\t  Last reward: {:.2f}\t  Average reward {:.2f}'.format(
+            print('Iter {}\t  Last reward {:.2f}\t  Average reward {:.2f}'.format(
                 i_iter, reward_episode, reward_batch))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
