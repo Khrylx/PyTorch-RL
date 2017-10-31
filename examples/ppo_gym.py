@@ -24,7 +24,7 @@ parser.add_argument('--model-path', metavar='G',
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
 parser.add_argument('--log-std', type=float, default=0, metavar='G',
-                    help='discount factor (default: 0)')
+                    help='log std for the policy (default: 0)')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                     help='discount factor (default: 0.99)')
 parser.add_argument('--tau', type=float, default=0.95, metavar='G',
