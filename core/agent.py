@@ -26,7 +26,7 @@ def collect_samples(env, memory, policy, custom_reward, tensor, render, running_
 
         for t in range(10000):
             state_var = Variable(tensor(state).unsqueeze(0), volatile=True)
-            action = policy.select_action(state_var)[0].cpu().numpy()
+            action = policy.select_action(state_var)[0].numpy()
             action = int(action) if policy.is_disc_action else action.astype(np.float64)
             next_state, reward, done, _ = env.step(action)
             reward_episode += reward
@@ -111,7 +111,7 @@ class Worker(multiprocessing.Process):
 class Agent:
 
     def __init__(self, env_factory, policy, custom_reward=None, render=False,
-                 tensor_type=DoubleTensor, running_state=None, num_threads=1):
+                 tensor_type=torch.DoubleTensor, running_state=None, num_threads=1):
         self.env_factory = env_factory
         self.policy = policy
         self.custom_reward = custom_reward
@@ -125,6 +125,8 @@ class Agent:
 
     def collect_samples(self, min_batch_size):
         t_start = time.time()
+        if use_gpu:
+            self.policy = self.policy.cpu()
         thread_batch_size = int(math.floor(min_batch_size / self.num_threads))
         queue = multiprocessing.Queue()
         memory = Memory()
@@ -148,6 +150,8 @@ class Agent:
         if self.num_threads > 1:
             log_list = [log] + worker_logs
             log = merge_log(log_list)
+        if use_gpu:
+            self.policy = self.policy.cuda()
         t_end = time.time()
         log['sample_time'] = t_end - t_start
         return batch, log

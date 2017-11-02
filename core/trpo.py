@@ -56,10 +56,10 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
         for param in value_net.parameters():
             value_loss += param.pow(2).sum() * l2_reg
         value_loss.backward()
-        return value_loss.data.double().numpy()[0], get_flat_grad_from(value_net).data.double().numpy()
+        return value_loss.data.cpu().numpy()[0], get_flat_grad_from(value_net).data.cpu().numpy()
 
     flat_params, _, opt_info = scipy.optimize.fmin_l_bfgs_b(get_value_loss,
-                                                            get_flat_params_from(value_net).double().numpy(),
+                                                            get_flat_params_from(value_net).cpu().numpy(),
                                                             maxiter=25)
     set_flat_params_to(value_net, torch.Tensor(flat_params))
 
