@@ -14,6 +14,7 @@ from torch.autograd import Variable
 from torch import nn
 from core.ppo import ppo_step
 from core.common import estimate_advantages
+from core.agent import Agent
 
 Tensor = DoubleTensor
 torch.set_default_tensor_type('torch.DoubleTensor')
@@ -25,6 +26,8 @@ parser.add_argument('--expert-traj-path', metavar='G',
                     help='path of the expert trajectories')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
+parser.add_argument('--log-std', type=float, default=0, metavar='G',
+                    help='log std for the policy (default: 0)')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                     help='discount factor (default: 0.99)')
 parser.add_argument('--tau', type=float, default=0.95, metavar='G',
@@ -32,9 +35,11 @@ parser.add_argument('--tau', type=float, default=0.95, metavar='G',
 parser.add_argument('--l2-reg', type=float, default=1e-3, metavar='G',
                     help='l2 regularization regression (default: 1e-3)')
 parser.add_argument('--learning-rate', type=float, default=3e-4, metavar='G',
-                    help='learning rate (default: 3e-4)')
+                    help='gae (default: 3e-4)')
 parser.add_argument('--clip-epsilon', type=float, default=0.2, metavar='N',
                     help='clipping epsilon for PPO')
+parser.add_argument('--num-threads', type=int, default=4, metavar='N',
+                    help='number of threads for agent (default: 4)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
 parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
@@ -47,26 +52,31 @@ parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
 args = parser.parse_args()
 
-env = gym.make(args.env_name)
-env.seed(args.seed)
+
+def env_factory(thread_id):
+    env = gym.make(args.env_name)
+    env.seed(args.seed + thread_id)
+    return env
+
+
+np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 if use_gpu:
     torch.cuda.manual_seed_all(args.seed)
 
-state_dim = env.observation_space.shape[0]
-is_disc_action = len(env.action_space.shape) == 0
+env_dummy = env_factory(0)
+state_dim = env_dummy.observation_space.shape[0]
+is_disc_action = len(env_dummy.action_space.shape) == 0
+action_dim = (1 if is_disc_action else env_dummy.action_space.shape[0])
 ActionTensor = LongTensor if is_disc_action else DoubleTensor
-
-# running_state = ZFilter((state_dim,), clip=5)
-# running_reward = ZFilter((1,), demean=False, clip=10)
 
 """define actor, critic and discrimiator"""
 if is_disc_action:
-    policy_net = DiscretePolicy(state_dim, env.action_space.n)
+    policy_net = DiscretePolicy(state_dim, env_dummy.action_space.n)
 else:
-    policy_net = Policy(state_dim, env.action_space.shape[0])
+    policy_net = Policy(state_dim, env_dummy.action_space.shape[0])
 value_net = Value(state_dim)
-discrim_net = Discriminator(state_dim + (1 if is_disc_action else env.action_space.shape[0]))
+discrim_net = Discriminator(state_dim + action_dim)
 discrim_criterion = nn.BCELoss()
 if use_gpu:
     policy_net = policy_net.cuda()
@@ -84,6 +94,16 @@ optim_batch_size = 64
 
 # load trajectory
 expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
+
+
+def expert_reward(state, action):
+    state_action = Tensor(np.hstack([state, action]))
+    return -math.log(discrim_net(Variable(state_action, volatile=True)).data.numpy()[0])
+
+
+"""create agent"""
+agent = Agent(env_factory, policy_net, custom_reward=expert_reward,
+              running_state=running_state, render=args.render, num_threads=args.num_threads)
 
 
 def update_params(batch, i_iter):
@@ -131,58 +151,14 @@ def update_params(batch, i_iter):
 
 
 def main_loop():
-    """generate multiple trajectories that reach the minimum batch_size"""
     for i_iter in range(args.max_iter_num):
-        memory = Memory()
-
-        num_steps = 0
-        true_reward_batch = 0
-        expert_reward_batch = 0
-        num_episodes = 0
-
-        while num_steps < args.min_batch_size:
-            state = env.reset()
-            state = running_state(state)
-            true_reward_episode = 0
-            expert_reward_episode = 0
-
-            for t in range(10000):
-                state_var = Variable(Tensor(state).unsqueeze(0), volatile=True)
-                action = policy_net.select_action(state_var)[0].cpu().numpy()
-                action = int(action) if is_disc_action else action.astype(np.float64)
-                next_state, true_reward, done, _ = env.step(action)
-                true_reward_episode += true_reward
-                next_state = running_state(next_state)
-
-                state_action = Tensor(np.hstack([state, action]))
-                expert_reward = -math.log(discrim_net(Variable(state_action, volatile=True)).data.numpy()[0])
-                expert_reward_episode += expert_reward
-
-                mask = 0 if done else 1
-
-                memory.push(state, action, mask, next_state, expert_reward)
-
-                if args.render:
-                    env.render()
-                if done:
-                    break
-
-                state = next_state
-
-            # log stats
-            num_steps += (t+1)
-            num_episodes += 1
-            true_reward_batch += true_reward_episode
-            expert_reward_batch += expert_reward_episode
-
-        true_reward_batch /= num_episodes
-        expert_reward_batch /= num_episodes
-        batch = memory.sample()
+        """generate multiple trajectories that reach the minimum batch_size"""
+        batch, log = agent.collect_samples(args.min_batch_size)
         update_params(batch, i_iter)
 
         if i_iter % args.log_interval == 0:
-            print('Iter {}\t  Average expert reward: {:.2f}\t  Average true reward {:.2f}'.format(
-                i_iter, expert_reward_batch, true_reward_batch))
+            print('{}\tT_sample {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}'.format(
+                i_iter, log['sample_time'], log['avg_c_reward'], log['avg_reward']))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             pickle.dump((policy_net, value_net), open('../assets/learned_models/{}_gail.p'.format(args.env_name), 'wb'))

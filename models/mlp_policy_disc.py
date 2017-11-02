@@ -7,6 +7,7 @@ from utils.math import *
 class DiscretePolicy(nn.Module):
     def __init__(self, state_dim, action_num, hidden_size=(128, 128), activation='tanh'):
         super().__init__()
+        self.is_disc_action = True
         if activation == 'tanh':
             self.activation = F.tanh
         elif activation == 'relu':

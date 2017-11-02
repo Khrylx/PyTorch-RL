@@ -23,5 +23,8 @@ class Memory(object):
             random_batch = random.sample(self.memory, batch_size)
             return Transition(*zip(*random_batch))
 
+    def append(self, new_memory):
+        self.memory += new_memory.memory
+
     def __len__(self):
         return len(self.memory)
