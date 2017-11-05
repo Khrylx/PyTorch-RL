@@ -5,6 +5,8 @@ This repository contains:
 2. [Generative Adversarial Imitation Learning (GAIL)](https://arxiv.org/pdf/1606.03476.pdf)
 
 ## Features
+* Support CUDA.
+* Support discrete and continous action space.
 * Support multiprocessing for agent to collect samples in multiple environments simultaneously.
 
 ## Policy gradient methods
@@ -21,5 +23,7 @@ This repository contains:
 
 
 ## Generative Adversarial Imitation Learning (GAIL)
-### Example
-* python gail/gail_gym.py --env-name Hopper-v1 --expert-traj-path ../assets/expert_traj/Hopper-v1_expert_traj.p
+### To save trajectory
+* python gail/save_expert_traj.py --model-path assets/expert_traj/Hopper-v1_ppo.p
+### To do imitation learning
+* python gail/gail_gym.py --env-name Hopper-v1 --expert-traj-path assets/expert_traj/Hopper-v1_expert_traj.p
