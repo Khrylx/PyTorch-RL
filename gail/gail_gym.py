@@ -161,7 +161,7 @@ def main_loop():
                 i_iter, log['sample_time'], log['avg_c_reward'], log['avg_reward']))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
-            pickle.dump((policy_net, value_net), open('../assets/learned_models/{}_gail.p'.format(args.env_name), 'wb'))
+            pickle.dump((policy_net, value_net), open(os.path.join(assets_dir(), 'learned_models/{}_gail.p'.format(args.env_name)), 'wb'))
 
 
 main_loop()

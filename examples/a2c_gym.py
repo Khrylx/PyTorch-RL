@@ -42,7 +42,7 @@ parser.add_argument('--max-iter-num', type=int, default=500, metavar='N',
                     help='maximal number of main iterations (default: 500)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 1)')
-parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
+parser.add_argument('--save-model-interval', type=int, default=1, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
 args = parser.parse_args()
 
@@ -113,7 +113,7 @@ def main_loop():
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             pickle.dump((policy_net, value_net, running_state),
-                        open('../assets/learned_models/{}_a2c.p'.format(args.env_name), 'wb'))
+                        open(os.path.join(assets_dir(), 'learned_models/{}_a2c.p'.format(args.env_name)), 'wb'))
 
 
 main_loop()

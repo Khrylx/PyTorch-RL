@@ -114,7 +114,7 @@ def main_loop():
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             pickle.dump((policy_net, value_net, running_state),
-                        open('../assets/learned_models/{}_trpo.p'.format(args.env_name), 'wb'))
+                        open(os.path.join(assets_dir(), 'learned_models/{}_trpo.p'.format(args.env_name)), 'wb'))
 
 
 main_loop()
