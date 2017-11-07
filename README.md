@@ -4,6 +4,8 @@ This repository contains:
 1. policy gradient methods (TRPO, PPO, A2C)
 2. [Generative Adversarial Imitation Learning (GAIL)](https://arxiv.org/pdf/1606.03476.pdf)
 
+To run mujoco environments, first install [mujoco-py](https://github.com/openai/mujoco-py) and my [modified version of gym](https://github.com/Khrylx/gym) which supports mujoco 1.50.
+
 ## Features
 * Support CUDA.
 * Support discrete and continous action space.
