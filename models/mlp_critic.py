@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 
 class Value(nn.Module):
-    def __init__(self, num_inputs, hidden_size=(128, 128), activation='tanh'):
+    def __init__(self, state_dim, hidden_size=(128, 128), activation='tanh'):
         super().__init__()
         if activation == 'tanh':
             self.activation = F.tanh
@@ -13,7 +13,7 @@ class Value(nn.Module):
             self.activation = F.sigmoid
 
         self.affine_layers = nn.ModuleList()
-        last_dim = num_inputs
+        last_dim = state_dim
         for nh in hidden_size:
             self.affine_layers.append(nn.Linear(last_dim, nh))
             last_dim = nh
