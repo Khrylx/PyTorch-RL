@@ -126,7 +126,7 @@ class Agent:
     def collect_samples(self, min_batch_size):
         t_start = time.time()
         if use_gpu:
-            self.policy = self.policy.cpu()
+            self.policy.cpu()
         thread_batch_size = int(math.floor(min_batch_size / self.num_threads))
         queue = multiprocessing.Queue()
         memory = Memory()
@@ -151,7 +151,7 @@ class Agent:
             log_list = [log] + worker_logs
             log = merge_log(log_list)
         if use_gpu:
-            self.policy = self.policy.cuda()
+            self.policy.cuda()
         t_end = time.time()
         log['sample_time'] = t_end - t_start
         return batch, log
