@@ -143,8 +143,12 @@ def main_loop():
                 i_iter, log['sample_time'], t1-t0, log['min_reward'], log['max_reward'], log['avg_reward']))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
-            pickle.dump((policy_net.cpu(), value_net.cpu(), running_state),
+            if use_gpu:
+                policy_net.cpu(), value_net.cpu()
+            pickle.dump((policy_net, value_net, running_state),
                         open(os.path.join(assets_dir(), 'learned_models/{}_ppo.p'.format(args.env_name)), 'wb'))
+            if use_gpu:
+                policy_net.cuda(), value_net.cuda()
 
 
 main_loop()
