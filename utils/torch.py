@@ -2,10 +2,10 @@ import torch
 import numpy as np
 
 use_gpu = torch.cuda.is_available()
-DoubleTensor = torch.cuda.DoubleTensor if use_gpu else torch.DoubleTensor
-FloatTensor = torch.cuda.FloatTensor if use_gpu else torch.FloatTensor
-LongTensor = torch.cuda.LongTensor if use_gpu else torch.LongTensor
-ByteTensor = torch.cuda.ByteTensor if use_gpu else torch.ByteTensor
+DoubleTensor = torch.DoubleTensor
+FloatTensor = torch.FloatTensor
+LongTensor = torch.LongTensor
+ByteTensor = torch.ByteTensor
 
 
 def ones(*shape):

@@ -1,7 +1,9 @@
 
 
-def estimate_advantages(rewards, masks, values, gamma, tau, tensor_type):
-
+def estimate_advantages(rewards, masks, values, gamma, tau, use_gpu):
+    if use_gpu:
+        rewards, masks, values = rewards.cpu(), masks.cpu(), values.cpu()
+    tensor_type = type(rewards)
     returns = tensor_type(rewards.size(0), 1)
     deltas = tensor_type(rewards.size(0), 1)
     advantages = tensor_type(rewards.size(0), 1)
@@ -19,4 +21,6 @@ def estimate_advantages(rewards, masks, values, gamma, tau, tensor_type):
         prev_advantage = advantages[i, 0]
     advantages = (advantages - advantages.mean()) / advantages.std()
 
+    if use_gpu:
+        advantages, returns = advantages.cuda(), returns.cuda()
     return advantages, returns

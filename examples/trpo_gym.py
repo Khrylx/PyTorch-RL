@@ -90,14 +90,16 @@ agent = Agent(env_factory, policy_net, running_state=running_state, render=args.
 
 
 def update_params(batch):
-    states = Tensor(batch.state)
-    actions = ActionTensor(batch.action)
-    rewards = Tensor(batch.reward)
-    masks = Tensor(batch.mask)
+    states = torch.from_numpy(np.stack(batch.state))
+    actions = torch.from_numpy(np.stack(batch.action))
+    rewards = torch.from_numpy(np.stack(batch.reward))
+    masks = torch.from_numpy(np.stack(batch.mask).astype(np.float64))
+    if use_gpu:
+        states, actions, rewards, masks = states.cuda(), actions.cuda(), rewards.cuda(), masks.cuda()
     values = value_net(Variable(states, volatile=True)).data
 
     """get advantage estimation from the trajectories"""
-    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, Tensor)
+    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, use_gpu)
 
     """perform TRPO update"""
     trpo_step(policy_net, value_net, states, actions, returns, advantages, args.max_kl, args.damping, args.l2_reg)
