@@ -3,6 +3,7 @@ import gym
 import os
 import sys
 import pickle
+import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from utils import *
@@ -90,7 +91,7 @@ optimizer_discrim = torch.optim.Adam(discrim_net.parameters(), lr=args.learning_
 
 # optimization epoch number and batch size for PPO
 optim_epochs = 5
-optim_batch_size = 64
+optim_batch_size = 4096
 
 # load trajectory
 expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
@@ -107,24 +108,41 @@ agent = Agent(env_factory, policy_net, custom_reward=expert_reward,
 
 
 def update_params(batch, i_iter):
-    states = Tensor(batch.state)
-    actions = ActionTensor(batch.action)
-    rewards = Tensor(batch.reward)
-    masks = Tensor(batch.mask)
+    states = torch.from_numpy(np.stack(batch.state))
+    actions = torch.from_numpy(np.stack(batch.action))
+    rewards = torch.from_numpy(np.stack(batch.reward))
+    masks = torch.from_numpy(np.stack(batch.mask).astype(np.float64))
+    if use_gpu:
+        states, actions, rewards, masks = states.cuda(), actions.cuda(), rewards.cuda(), masks.cuda()
     values = value_net(Variable(states, volatile=True)).data
     fixed_log_probs = policy_net.get_log_prob(Variable(states, volatile=True), Variable(actions)).data
 
     """get advantage estimation from the trajectories"""
-    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, Tensor)
+    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, use_gpu)
 
     lr_mult = max(1.0 - float(i_iter) / args.max_iter_num, 0)
+
+    """update discriminator"""
+    for _ in range(3):
+        expert_state_actions = Tensor(expert_traj)
+        if use_gpu:
+            expert_state_actions = expert_state_actions.cuda()
+        g_o = discrim_net(Variable(torch.cat([states, actions], 1)))
+        e_o = discrim_net(Variable(expert_state_actions))
+        optimizer_discrim.zero_grad()
+        discrim_loss = discrim_criterion(g_o, Variable(ones((states.shape[0], 1)))) + \
+            discrim_criterion(e_o, Variable(zeros((expert_traj.shape[0], 1))))
+        discrim_loss.backward()
+        optimizer_discrim.step()
 
     """perform mini-batch PPO update"""
     optim_iter_num = int(math.ceil(states.shape[0] / optim_batch_size))
     for _ in range(optim_epochs):
         perm = np.arange(states.shape[0])
         np.random.shuffle(perm)
-        perm = LongTensor(perm.tolist())
+        perm = LongTensor(perm)
+        if use_gpu:
+            perm = perm.cuda()
         states, actions, returns, advantages, fixed_log_probs = \
             states[perm], actions[perm], returns[perm], advantages[perm], fixed_log_probs[perm]
 
@@ -132,20 +150,7 @@ def update_params(batch, i_iter):
             ind = slice(i * optim_batch_size, min((i + 1) * optim_batch_size, states.shape[0]))
             states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
                 states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
-            expert_state_actions_b = Tensor(expert_traj[np.random.choice(expert_traj.shape[0],
-                                                                         states_b.shape[0], replace=False), :])
 
-            """update discriminator"""
-            for _ in range(3):
-                g_o = discrim_net(Variable(torch.cat([states_b, actions_b], 1)))
-                e_o = discrim_net(Variable(expert_state_actions_b))
-                optimizer_discrim.zero_grad()
-                discrim_loss = discrim_criterion(g_o, Variable(ones((states_b.shape[0], 1)))) + \
-                    discrim_criterion(e_o, Variable(zeros((states_b.shape[0], 1))))
-                discrim_loss.backward()
-                optimizer_discrim.step()
-
-            """update generator"""
             ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
                      advantages_b, fixed_log_probs_b, lr_mult, args.learning_rate, args.clip_epsilon, args.l2_reg)
 
@@ -153,12 +158,19 @@ def update_params(batch, i_iter):
 def main_loop():
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
+        if use_gpu:
+            discrim_net.cpu()
         batch, log = agent.collect_samples(args.min_batch_size)
+        if use_gpu:
+            discrim_net.cuda()
+
+        t0 = time.time()
         update_params(batch, i_iter)
+        t1 = time.time()
 
         if i_iter % args.log_interval == 0:
-            print('{}\tT_sample {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}'.format(
-                i_iter, log['sample_time'], log['avg_c_reward'], log['avg_reward']))
+            print('{}\tT_sample {:.4f}\tT_update {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}'.format(
+                i_iter, log['sample_time'], t1-t0, log['avg_c_reward'], log['avg_reward']))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             pickle.dump((policy_net, value_net), open(os.path.join(assets_dir(), 'learned_models/{}_gail.p'.format(args.env_name)), 'wb'))
