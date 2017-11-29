@@ -4,12 +4,17 @@ This repository contains:
 1. policy gradient methods (TRPO, PPO, A2C)
 2. [Generative Adversarial Imitation Learning (GAIL)](https://arxiv.org/pdf/1606.03476.pdf)
 
-To run mujoco environments, first install [mujoco-py](https://github.com/openai/mujoco-py) and my [modified version of gym](https://github.com/Khrylx/gym) which supports mujoco 1.50.
+## Important notes
+- To run mujoco environments, first install [mujoco-py](https://github.com/openai/mujoco-py) and my [modified version of gym](https://github.com/Khrylx/gym) which supports mujoco 1.50.
+- If you have a GPU and you are running on linux, I recommend setting the OMP_NUM_THREADS to 1 (PyTorch will create additional threads when performing computations which can damage the performance of multiprocessing on Linux. It works fine on OS X though):
+```
+export OMP_NUM_THREADS=1
+```
 
 ## Features
-* Support CUDA.
+* Support CUDA. (x10 faster than CPU implementation)
 * Support discrete and continous action space.
-* Support multiprocessing for agent to collect samples in multiple environments simultaneously.
+* Support multiprocessing for agent to collect samples in multiple environments simultaneously. (x4 faster than single thread)
 
 ## Policy gradient methods
 * [Trust Region Policy Optimization (TRPO)](https://arxiv.org/pdf/1502.05477.pdf) -> [examples/trpo_gym.py](https://github.com/Khrylx/PyTorch-RL/blob/master/examples/trpo_gym.py)
