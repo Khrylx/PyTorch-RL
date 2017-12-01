@@ -71,8 +71,42 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
         action_loss = -Variable(advantages) * torch.exp(log_probs - Variable(fixed_log_probs))
         return action_loss.mean()
 
+    """use fisher information matrix for Hessian*vector"""
+    def cal_fim():
+        cov_inv, mean = policy_net.get_fim(Variable(states))
+        param_count = 0
+        std_index = 0
+        for name, param in policy_net.named_parameters():
+            if name == "action_log_std":
+                std_index = param_count
+            param_count += param.data.view(-1).shape[0]
+
+        for i in range(1000):
+            print(i)
+            k = torch.randn((param_count, 3)).numpy()
+            w = k.dot(k.T)
+
+        fim = zeros(param_count, param_count)
+        for i in range(mean.size(0)):
+            # print(i)
+            mean_jacobian = zeros(param_count, mean.size(1))
+            for j in range(mean.size(1)):
+                mean[i, j].backward(retain_graph=True)
+                grad = get_flat_grad_from(policy_net)
+                mean_jacobian[:, j] += grad.data
+            fim += mean_jacobian.mm(mean_jacobian.t())
+        fim /= mean.size(0)
+        fim[std_index:std_index + cov_inv.shape[0], std_index: std_index + cov_inv.shape[0]] += 0.5 * cov_inv
+        return fim
+
+    fim = cal_fim()
+
+    def Fvp_fim(v):
+        return fim.mm(v.unsqueeze(1)).squeeze() + v * damping
+
     """define Hessian*vector for KL"""
     def Fvp(v):
+        res1 = Fvp_fim(v)
         kl = policy_net.get_kl(Variable(states))
         kl = kl.mean()
 
@@ -83,6 +117,7 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
         grads = torch.autograd.grad(kl_v, policy_net.parameters())
         flat_grad_grad_kl = torch.cat([grad.contiguous().view(-1) for grad in grads]).data
 
+        res2 = flat_grad_grad_kl + v * damping
         return flat_grad_grad_kl + v * damping
 
     loss = get_loss()

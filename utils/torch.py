@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from torch.autograd import Variable
 
 use_gpu = torch.cuda.is_available()
 DoubleTensor = torch.DoubleTensor
@@ -40,7 +41,10 @@ def get_flat_grad_from(net, grad_grad=False):
         if grad_grad:
             grads.append(param.grad.grad.view(-1))
         else:
-            grads.append(param.grad.view(-1))
+            if param.grad is None:
+                grads.append(Variable(zeros(param.data.view(-1).shape)))
+            else:
+                grads.append(param.grad.view(-1))
 
     flat_grad = torch.cat(grads)
     return flat_grad

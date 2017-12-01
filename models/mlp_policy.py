@@ -55,3 +55,9 @@ class Policy(nn.Module):
         action_mean, action_log_std, action_std = self.forward(x)
         return normal_log_density(actions, action_mean, action_log_std, action_std)
 
+    def get_fim(self, x):
+        mean, _, _ = self.forward(x)
+        cov_inv = torch.diag(self.action_log_std.data.exp().pow(-2).squeeze(0))
+        return cov_inv, mean
+
+
