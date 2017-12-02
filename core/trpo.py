@@ -39,7 +39,7 @@ def line_search(model, f, x, fullstep, expected_improve_full, max_backtracks=10,
     return False, x
 
 
-def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_kl, damping, l2_reg):
+def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_kl, damping, l2_reg, use_fim=True):
 
     """update critic"""
     values_target = Variable(returns)
@@ -56,7 +56,7 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
         for param in value_net.parameters():
             value_loss += param.pow(2).sum() * l2_reg
         value_loss.backward()
-        return value_loss.data.cpu().numpy()[0], get_flat_grad_from(value_net).data.cpu().numpy()
+        return value_loss.data.cpu().numpy()[0], get_flat_grad_from(value_net.parameters()).data.cpu().numpy()
 
     flat_params, _, opt_info = scipy.optimize.fmin_l_bfgs_b(get_value_loss,
                                                             get_flat_params_from(value_net).cpu().numpy(),
@@ -73,30 +73,26 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
 
     """use fisher information matrix for Hessian*vector"""
     def Fvp_fim(v):
-        cov_inv, mean = policy_net.get_fim(Variable(states))
-        param_count = 0
-        std_index = 0
-        res = zeros(v.shape)
-        for name, param in policy_net.named_parameters():
-            if name == "action_log_std":
-                std_index = param_count
-            param_count += param.data.view(-1).shape[0]
+        M, mu, info = policy_net.get_fim(Variable(states))
+        mu = mu.view(-1)
+        filter_input_ids = set() if policy_net.is_disc_action else set([info['std_id']])
 
-        for i in range(mean.size(0)):
-            mean_jacobian = zeros(param_count, mean.size(1))
-            for j in range(mean.size(1)):
-                mean[i, j].backward(retain_graph=True)
-                grad = get_flat_grad_from(policy_net)
-                mean_jacobian[:, j] += grad.data
-                for param in policy_net.parameters():
-                    param.grad = None
-            res += mean_jacobian.mm(cov_inv.mm(mean_jacobian.t().mm(v.unsqueeze(1)))).squeeze()
-        res /= mean.size(0)
-        res[std_index: std_index + cov_inv.shape[0]] += 2 * v[std_index: std_index + cov_inv.shape[0]]
-        return res + v * damping
+        t = Variable(ones(mu.size()), requires_grad=True)
+        mu_t = (mu * t).sum()
+        Jt = compute_flat_grad(mu_t, policy_net.parameters(), filter_input_ids=filter_input_ids, create_graph=True)
+        Jtv = (Jt * Variable(v)).sum()
+        Jv = torch.autograd.grad(Jtv, t, retain_graph=True)[0]
+        MJv = Variable(M * Jv.data)
+        mu_MJv = (MJv * mu).sum()
+        JTMJv = compute_flat_grad(mu_MJv, policy_net.parameters(), filter_input_ids=filter_input_ids, retain_graph=True).data
+        JTMJv /= states.shape[0]
+        if not policy_net.is_disc_action:
+            std_index = info['std_index']
+            JTMJv[std_index: std_index + M.shape[0]] += 2 * v[std_index: std_index + M.shape[0]]
+        return JTMJv + v * damping
 
     """directly compute Hessian*vector from KL"""
-    def Fvp(v):
+    def Fvp_direct(v):
         kl = policy_net.get_kl(Variable(states))
         kl = kl.mean()
 
@@ -106,14 +102,17 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
         kl_v = (flat_grad_kl * Variable(v)).sum()
         grads = torch.autograd.grad(kl_v, policy_net.parameters())
         flat_grad_grad_kl = torch.cat([grad.contiguous().view(-1) for grad in grads]).data
+
         return flat_grad_grad_kl + v * damping
+
+    Fvp = Fvp_fim if use_fim else Fvp_direct
 
     loss = get_loss()
     grads = torch.autograd.grad(loss, policy_net.parameters())
     loss_grad = torch.cat([grad.view(-1) for grad in grads]).data
-    stepdir = conjugate_gradients(Fvp_fim, -loss_grad, 10)
+    stepdir = conjugate_gradients(Fvp, -loss_grad, 10)
 
-    shs = 0.5 * (stepdir.dot(Fvp_fim(stepdir)))
+    shs = 0.5 * (stepdir.dot(Fvp(stepdir)))
     lm = math.sqrt(max_kl / shs)
     fullstep = stepdir * lm
     expected_improve = -loss_grad.dot(fullstep)

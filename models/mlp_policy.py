@@ -57,7 +57,16 @@ class Policy(nn.Module):
 
     def get_fim(self, x):
         mean, _, _ = self.forward(x)
-        cov_inv = torch.diag(self.action_log_std.data.exp().pow(-2).squeeze(0))
-        return cov_inv, mean
+        cov_inv = self.action_log_std.data.exp().pow(-2).squeeze(0).repeat(x.size(0))
+        param_count = 0
+        std_index = 0
+        id = 0
+        for name, param in self.named_parameters():
+            if name == "action_log_std":
+                std_id = id
+                std_index = param_count
+            param_count += param.data.view(-1).shape[0]
+            id += 1
+        return cov_inv, mean, {'std_id': std_id, 'std_index': std_index}
 
 

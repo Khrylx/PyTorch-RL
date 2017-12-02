@@ -47,3 +47,8 @@ class DiscretePolicy(nn.Module):
         action_prob = self.forward(x)
         return action_prob.gather(1, actions.unsqueeze(1))
 
+    def get_fim(self, x):
+        action_prob = self.forward(x)
+        M = action_prob.pow(-1).view(-1).data
+        return M, action_prob, {}
+
