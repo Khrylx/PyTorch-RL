@@ -6,8 +6,9 @@ import math
 import time
 
 
-def collect_samples(queue, env, policy, custom_reward, mean_action,
+def collect_samples(pid, queue, env, policy, custom_reward, mean_action,
                     tensor, render, running_state, update_rs, min_batch_size):
+    torch.randn(pid, )
     log = dict()
     memory = Memory()
     num_steps = 0
@@ -121,13 +122,13 @@ class Agent:
         workers = []
 
         for i in range(self.num_threads-1):
-            worker_args = (queue, self.env_list[i + 1], self.policy, self.custom_reward, self.mean_action,
+            worker_args = (i+1, queue, self.env_list[i + 1], self.policy, self.custom_reward, self.mean_action,
                            self.tensor, False, self.running_state, False, thread_batch_size)
             workers.append(multiprocessing.Process(target=collect_samples, args=worker_args))
         for worker in workers:
             worker.start()
 
-        memory, log = collect_samples(None, self.env_list[0], self.policy, self.custom_reward, self.mean_action,
+        memory, log = collect_samples(0, None, self.env_list[0], self.policy, self.custom_reward, self.mean_action,
                                       self.tensor, self.render, self.running_state, True, thread_batch_size)
 
         worker_logs = []
