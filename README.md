@@ -6,7 +6,7 @@ This repository contains:
 
 ## Important notes
 - To run mujoco environments, first install [mujoco-py](https://github.com/openai/mujoco-py) and my [modified version of gym](https://github.com/Khrylx/gym) which supports mujoco 1.50.
-- If you have a GPU and you are running on linux, I recommend setting the OMP_NUM_THREADS to 1 (PyTorch will create additional threads when performing computations which can damage the performance of multiprocessing on Linux. It works fine on OS X though):
+- If you have a GPU, I recommend setting the OMP_NUM_THREADS to 1 (PyTorch will create additional threads when performing computations which can damage the performance of multiprocessing. This problem is most serious with Linux, where multiprocessing can be even slower than a single thread):
 ```
 export OMP_NUM_THREADS=1
 ```
