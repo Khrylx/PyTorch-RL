@@ -75,7 +75,7 @@ def collect_samples(pid, queue, env, policy, custom_reward, mean_action,
         log['min_c_reward'] = min_c_reward
 
     if queue is not None:
-        queue.put([memory, log])
+        queue.put([pid, memory, log])
     else:
         return memory, log
 
@@ -131,11 +131,14 @@ class Agent:
         memory, log = collect_samples(0, None, self.env_list[0], self.policy, self.custom_reward, self.mean_action,
                                       self.tensor, self.render, self.running_state, True, thread_batch_size)
 
-        worker_logs = []
+        worker_logs = [None] * len(workers)
+        worker_memories = [None] * len(workers)
         for _ in workers:
-            worker_memory, worker_log = queue.get()
+            pid, worker_memory, worker_log = queue.get()
+            worker_memories[pid - 1] = worker_memory
+            worker_logs[pid - 1] = worker_log
+        for worker_memory in worker_memories:
             memory.append(worker_memory)
-            worker_logs.append(worker_log)
         batch = memory.sample()
         if self.num_threads > 1:
             log_list = [log] + worker_logs
