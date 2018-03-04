@@ -45,7 +45,7 @@ class DiscretePolicy(nn.Module):
 
     def get_log_prob(self, x, actions):
         action_prob = self.forward(x)
-        return action_prob.gather(1, actions.unsqueeze(1))
+        return torch.log(action_prob.gather(1, actions.unsqueeze(1)))
 
     def get_fim(self, x):
         action_prob = self.forward(x)
