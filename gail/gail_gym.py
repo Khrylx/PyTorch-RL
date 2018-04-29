@@ -179,7 +179,7 @@ def main_loop():
             if use_gpu:
                 policy_net.cuda(), value_net.cuda(), discrim_net.cuda()
 
-        """clean up gpu memroy"""
+        """clean up gpu memory"""
         torch.cuda.empty_cache()
 
 
