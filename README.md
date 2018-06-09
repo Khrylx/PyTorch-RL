@@ -15,7 +15,7 @@ export OMP_NUM_THREADS=1
 * Support CUDA. (x10 faster than CPU implementation)
 * Support discrete and continous action space.
 * Support multiprocessing for agent to collect samples in multiple environments simultaneously. (x8 faster than single thread)
-* Fast Fisher vector product calculation. For this part, Ankur kindly wrote a [blog](http://www.telesens.co/2018/06/03/fisher-vector-product-trpo/) explaining the implementation details.
+* Fast Fisher vector product calculation. For this part, Ankur kindly wrote a [blog](http://www.telesens.co/2018/06/09/efficiently-computing-the-fisher-vector-product-in-trpo/) explaining the implementation details.
 ## Policy gradient methods
 * [Trust Region Policy Optimization (TRPO)](https://arxiv.org/pdf/1502.05477.pdf) -> [examples/trpo_gym.py](https://github.com/Khrylx/PyTorch-RL/blob/master/examples/trpo_gym.py)
 * [Proximal Policy Optimization (PPO)](https://arxiv.org/pdf/1707.06347.pdf) -> [examples/ppo_gym.py](https://github.com/Khrylx/PyTorch-RL/blob/master/examples/ppo_gym.py)
