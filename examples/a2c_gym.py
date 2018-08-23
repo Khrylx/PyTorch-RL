@@ -51,7 +51,8 @@ def env_factory(thread_id):
     return env
 
 
-dtype = torch.float32
+dtype = torch.float64
+torch.set_default_dtype(dtype)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
