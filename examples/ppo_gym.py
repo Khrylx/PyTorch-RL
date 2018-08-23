@@ -14,8 +14,6 @@ from core.ppo import ppo_step
 from core.common import estimate_advantages
 from core.agent import Agent
 
-Tensor = DoubleTensor
-torch.set_default_tensor_type('torch.DoubleTensor')
 
 parser = argparse.ArgumentParser(description='PyTorch PPO example')
 parser.add_argument('--env-name', default="Reacher-v1", metavar='G',
@@ -48,6 +46,7 @@ parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
 parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
+parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
 
 
@@ -59,7 +58,7 @@ def env_factory(thread_id):
 
 dtype = torch.float64
 torch.set_default_dtype(dtype)
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cuda', index=args.gpu_index) if torch.cuda.is_available() else torch.device('cpu')
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 env_dummy = env_factory(0)

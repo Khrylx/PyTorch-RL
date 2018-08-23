@@ -49,6 +49,7 @@ parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
 parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
+parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
 
 
@@ -58,16 +59,14 @@ def env_factory(thread_id):
     return env
 
 
+dtype = torch.float64
+torch.set_default_dtype(dtype)
+device = torch.device('cuda', index=args.gpu_index) if torch.cuda.is_available() else torch.device('cpu')
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
-if use_gpu:
-    torch.cuda.manual_seed_all(args.seed)
-
 env_dummy = env_factory(0)
 state_dim = env_dummy.observation_space.shape[0]
 is_disc_action = len(env_dummy.action_space.shape) == 0
-ActionTensor = LongTensor if is_disc_action else DoubleTensor
-
 running_state = ZFilter((state_dim,), clip=5)
 # running_reward = ZFilter((1,), demean=False, clip=10)
 
@@ -80,13 +79,12 @@ if args.model_path is None:
     value_net = Value(state_dim)
 else:
     policy_net, value_net, running_state = pickle.load(open(args.model_path, "rb"))
-if use_gpu:
-    policy_net = policy_net.cuda()
-    value_net = value_net.cuda()
+policy_net.to(device)
+value_net.to(device)
 del env_dummy
 
 """create agent"""
-agent = Agent(env_factory, policy_net, running_state=running_state, render=args.render, num_threads=args.num_threads)
+agent = Agent(env_factory, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads)
 
 
 def update_params(batch):
