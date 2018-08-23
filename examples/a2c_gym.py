@@ -10,13 +10,10 @@ from utils import *
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
 from models.mlp_policy_disc import DiscretePolicy
-from torch.autograd import Variable
 from core.a2c import a2c_step
 from core.common import estimate_advantages
 from core.agent import Agent
 
-Tensor = DoubleTensor
-torch.set_default_tensor_type('torch.DoubleTensor')
 
 parser = argparse.ArgumentParser(description='PyTorch A2C example')
 parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
@@ -54,16 +51,13 @@ def env_factory(thread_id):
     return env
 
 
+dtype = torch.float32
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
-if use_gpu:
-    torch.cuda.manual_seed_all(args.seed)
-
 env_dummy = env_factory(0)
 state_dim = env_dummy.observation_space.shape[0]
 is_disc_action = len(env_dummy.action_space.shape) == 0
-ActionTensor = LongTensor if is_disc_action else DoubleTensor
-
 running_state = ZFilter((state_dim,), clip=5)
 # running_reward = ZFilter((1,), demean=False, clip=10)
 
@@ -76,29 +70,27 @@ if args.model_path is None:
     value_net = Value(state_dim)
 else:
     policy_net, value_net, running_state = pickle.load(open(args.model_path, "rb"))
-if use_gpu:
-    policy_net = policy_net.cuda()
-    value_net = value_net.cuda()
+policy_net.to(device)
+value_net.to(device)
 del env_dummy
 
 optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=0.01)
 optimizer_value = torch.optim.Adam(value_net.parameters(), lr=0.01)
 
 """create agent"""
-agent = Agent(env_factory, policy_net, running_state=running_state, render=args.render, num_threads=args.num_threads)
+agent = Agent(env_factory, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads)
 
 
 def update_params(batch):
-    states = torch.from_numpy(np.stack(batch.state))
-    actions = torch.from_numpy(np.stack(batch.action))
-    rewards = torch.from_numpy(np.stack(batch.reward))
-    masks = torch.from_numpy(np.stack(batch.mask).astype(np.float64))
-    if use_gpu:
-        states, actions, rewards, masks = states.cuda(), actions.cuda(), rewards.cuda(), masks.cuda()
-    values = value_net(Variable(states, volatile=True)).data
+    states = torch.from_numpy(np.stack(batch.state)).to(dtype).to(device)
+    actions = torch.from_numpy(np.stack(batch.action)).to(dtype).to(device)
+    rewards = torch.from_numpy(np.stack(batch.reward)).to(dtype).to(device)
+    masks = torch.from_numpy(np.stack(batch.mask)).to(dtype).to(device)
+    with torch.no_grad():
+        values = value_net(states)
 
     """get advantage estimation from the trajectories"""
-    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, use_gpu)
+    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
 
     """perform TRPO update"""
     a2c_step(policy_net, value_net, optimizer_policy, optimizer_value, states, actions, returns, advantages, args.l2_reg)
@@ -117,12 +109,10 @@ def main_loop():
                 i_iter, log['sample_time'], t1-t0, log['min_reward'], log['max_reward'], log['avg_reward']))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
-            if use_gpu:
-                policy_net.cpu(), value_net.cpu()
+            to_device(torch.device('cpu'), policy_net, value_net)
             pickle.dump((policy_net, value_net, running_state),
                         open(os.path.join(assets_dir(), 'learned_models/{}_a2c.p'.format(args.env_name)), 'wb'))
-            if use_gpu:
-                policy_net.cuda(), value_net.cuda()
+            to_device(device, policy_net, value_net)
 
         """clean up gpu memory"""
         torch.cuda.empty_cache()

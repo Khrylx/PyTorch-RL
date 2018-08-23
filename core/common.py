@@ -1,8 +1,9 @@
+import torch
+from utils import to_device
 
 
-def estimate_advantages(rewards, masks, values, gamma, tau, use_gpu):
-    if use_gpu:
-        rewards, masks, values = rewards.cpu(), masks.cpu(), values.cpu()
+def estimate_advantages(rewards, masks, values, gamma, tau, device):
+    rewards, masks, values = to_device(torch.device('cpu'), rewards, masks, values)
     tensor_type = type(rewards)
     deltas = tensor_type(rewards.size(0), 1)
     advantages = tensor_type(rewards.size(0), 1)
@@ -19,6 +20,5 @@ def estimate_advantages(rewards, masks, values, gamma, tau, use_gpu):
     returns = values + advantages
     advantages = (advantages - advantages.mean()) / advantages.std()
 
-    if use_gpu:
-        advantages, returns = advantages.cuda(), returns.cuda()
+    advantages, returns = to_device(device, advantages, returns)
     return advantages, returns

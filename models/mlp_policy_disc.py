@@ -1,5 +1,5 @@
 import torch.nn as nn
-import torch.nn.functional as F
+import torch
 from torch.autograd import Variable
 from utils.math import *
 
@@ -9,11 +9,11 @@ class DiscretePolicy(nn.Module):
         super().__init__()
         self.is_disc_action = True
         if activation == 'tanh':
-            self.activation = F.tanh
+            self.activation = torch.tanh
         elif activation == 'relu':
-            self.activation = F.relu
+            self.activation = torch.relu
         elif activation == 'sigmoid':
-            self.activation = F.sigmoid
+            self.activation = torch.sigmoid
 
         self.affine_layers = nn.ModuleList()
         last_dim = state_dim

@@ -2,19 +2,16 @@ import torch
 import numpy as np
 from torch.autograd import Variable
 
-use_gpu = torch.cuda.is_available()
 DoubleTensor = torch.DoubleTensor
 FloatTensor = torch.FloatTensor
 LongTensor = torch.LongTensor
 ByteTensor = torch.ByteTensor
+ones = torch.ones
+zeros = torch.zeros
 
 
-def ones(*shape):
-    return torch.ones(*shape).cuda() if use_gpu else torch.ones(*shape)
-
-
-def zeros(*shape):
-    return torch.zeros(*shape).cuda() if use_gpu else torch.zeros(*shape)
+def to_device(device, *args):
+    return [x.to(device) for x in args]
 
 
 def get_flat_params_from(model):
