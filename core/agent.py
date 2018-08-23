@@ -26,12 +26,12 @@ def collect_samples(pid, queue, env, policy, custom_reward,
         reward_episode = 0
 
         for t in range(10000):
+            state_var = torch.Tensor(state).unsqueeze(0)
             with torch.no_grad():
-                state_var = torch.Tensor(state).unsqueeze(0)
-            if mean_action:
-                action = policy(state_var)[0].data[0].numpy()
-            else:
-                action = policy.select_action(state_var)[0].numpy()
+                if mean_action:
+                    action = policy(state_var)[0][0].numpy()
+                else:
+                    action = policy.select_action(state_var)[0].numpy()
             action = int(action) if policy.is_disc_action else action.astype(np.float64)
             next_state, reward, done, _ = env.step(action)
             reward_episode += reward

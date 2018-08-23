@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from itertools import count
 from utils import *
-from torch.autograd import Variable
+
 
 Tensor = DoubleTensor
 torch.set_default_tensor_type('torch.DoubleTensor')
@@ -49,9 +49,9 @@ def main_loop():
         reward_episode = 0
 
         for t in range(10000):
-            state_var = Variable(Tensor(state).unsqueeze(0),  volatile=True)
+            state_var = Tensor(state).unsqueeze(0)
             # choose mean action
-            action = policy_net(state_var)[0].data[0].cpu().numpy()
+            action = policy_net(state_var)[0][0].cpu().numpy()
             # choose stochastic action
             # action = policy_net.select_action(state_var)[0].cpu().numpy()
             action = int(action) if is_disc_action else action.astype(np.float64)

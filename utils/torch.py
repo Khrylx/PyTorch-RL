@@ -1,6 +1,5 @@
 import torch
 import numpy as np
-from torch.autograd import Variable
 
 DoubleTensor = torch.DoubleTensor
 FloatTensor = torch.FloatTensor
@@ -17,7 +16,7 @@ def to_device(device, *args):
 def get_flat_params_from(model):
     params = []
     for param in model.parameters():
-        params.append(param.data.view(-1))
+        params.append(param.view(-1))
 
     flat_params = torch.cat(params)
     return flat_params
@@ -27,7 +26,7 @@ def set_flat_params_to(model, flat_params):
     prev_ind = 0
     for param in model.parameters():
         flat_size = int(np.prod(list(param.size())))
-        param.data.copy_(
+        param.copy_(
             flat_params[prev_ind:prev_ind + flat_size].view(param.size()))
         prev_ind += flat_size
 
@@ -39,7 +38,7 @@ def get_flat_grad_from(inputs, grad_grad=False):
             grads.append(param.grad.grad.view(-1))
         else:
             if param.grad is None:
-                grads.append(Variable(zeros(param.data.view(-1).shape)))
+                grads.append(zeros(param.view(-1).shape))
             else:
                 grads.append(param.grad.view(-1))
 
@@ -63,7 +62,7 @@ def compute_flat_grad(output, inputs, filter_input_ids=set(), retain_graph=False
     out_grads = []
     for i, param in enumerate(inputs):
         if i in filter_input_ids:
-            out_grads.append(Variable(zeros(param.data.view(-1).shape)))
+            out_grads.append(zeros(param.view(-1).shape))
         else:
             out_grads.append(grads[j].view(-1))
             j += 1

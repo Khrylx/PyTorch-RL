@@ -1,6 +1,5 @@
 import torch.nn as nn
 import torch
-from torch.autograd import Variable
 from utils.math import *
 
 
@@ -29,26 +28,26 @@ class DiscretePolicy(nn.Module):
         for affine in self.affine_layers:
             x = self.activation(affine(x))
 
-        action_prob = F.softmax(self.action_head(x))
+        action_prob = torch.softmax(self.action_head(x), dim=1)
         return action_prob
 
     def select_action(self, x):
         action_prob = self.forward(x)
-        action = action_prob.multinomial()
-        return action.data
+        action = action_prob.multinomial(1)
+        return action
 
     def get_kl(self, x):
         action_prob1 = self.forward(x)
-        action_prob0 = Variable(action_prob1.data)
+        action_prob0 = action_prob1.detach()
         kl = action_prob0 * (torch.log(action_prob0) - torch.log(action_prob1))
         return kl.sum(1, keepdim=True)
 
     def get_log_prob(self, x, actions):
         action_prob = self.forward(x)
-        return torch.log(action_prob.gather(1, actions.unsqueeze(1)))
+        return torch.log(action_prob.gather(1, actions.long().unsqueeze(1)))
 
     def get_fim(self, x):
         action_prob = self.forward(x)
-        M = action_prob.pow(-1).view(-1).data
+        M = action_prob.pow(-1).view(-1)
         return M, action_prob, {}
 

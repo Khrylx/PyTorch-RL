@@ -1,5 +1,4 @@
 import torch
-from torch.autograd import Variable
 
 
 def a2c_step(policy_net, value_net, optimizer_policy, optimizer_value, states, actions, returns, advantages, l2_reg):
