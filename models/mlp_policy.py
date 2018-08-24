@@ -66,6 +66,6 @@ class Policy(nn.Module):
                 std_index = param_count
             param_count += param.view(-1).shape[0]
             id += 1
-        return cov_inv, mean, {'std_id': std_id, 'std_index': std_index}
+        return cov_inv.detach(), mean, {'std_id': std_id, 'std_index': std_index}
 
 

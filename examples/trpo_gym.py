@@ -10,7 +10,6 @@ from utils import *
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
 from models.mlp_policy_disc import DiscretePolicy
-from torch.autograd import Variable
 from core.trpo import trpo_step
 from core.common import estimate_advantages
 from core.agent import Agent
@@ -86,16 +85,15 @@ agent = Agent(env_factory, policy_net, device, running_state=running_state, rend
 
 
 def update_params(batch):
-    states = torch.from_numpy(np.stack(batch.state))
-    actions = torch.from_numpy(np.stack(batch.action))
-    rewards = torch.from_numpy(np.stack(batch.reward))
-    masks = torch.from_numpy(np.stack(batch.mask).astype(np.float64))
-    if use_gpu:
-        states, actions, rewards, masks = states.cuda(), actions.cuda(), rewards.cuda(), masks.cuda()
-    values = value_net(Variable(states, volatile=True)).data
+    states = torch.from_numpy(np.stack(batch.state)).to(dtype).to(device)
+    actions = torch.from_numpy(np.stack(batch.action)).to(dtype).to(device)
+    rewards = torch.from_numpy(np.stack(batch.reward)).to(dtype).to(device)
+    masks = torch.from_numpy(np.stack(batch.mask)).to(dtype).to(device)
+    with torch.no_grad():
+        values = value_net(states)
 
     """get advantage estimation from the trajectories"""
-    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, use_gpu)
+    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
 
     """perform TRPO update"""
     trpo_step(policy_net, value_net, states, actions, returns, advantages, args.max_kl, args.damping, args.l2_reg)
@@ -114,12 +112,10 @@ def main_loop():
                 i_iter, log['sample_time'], t1-t0, log['min_reward'], log['max_reward'], log['avg_reward']))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
-            if use_gpu:
-                policy_net.cpu(), value_net.cpu()
+            to_device(torch.device('cpu'), policy_net, value_net)
             pickle.dump((policy_net, value_net, running_state),
                         open(os.path.join(assets_dir(), 'learned_models/{}_trpo.p'.format(args.env_name)), 'wb'))
-            if use_gpu:
-                policy_net.cuda(), value_net.cuda()
+            to_device(device, policy_net, value_net)
 
         """clean up gpu memory"""
         torch.cuda.empty_cache()

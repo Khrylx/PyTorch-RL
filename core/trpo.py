@@ -1,5 +1,4 @@
 import numpy as np
-from torch.autograd import Variable
 import scipy.optimize
 from utils import *
 
@@ -24,12 +23,12 @@ def conjugate_gradients(Avp_f, b, nsteps, rdotr_tol=1e-10):
 
 
 def line_search(model, f, x, fullstep, expected_improve_full, max_backtracks=10, accept_ratio=0.1):
-    fval = f(True).data[0]
+    fval = f(True).item()
 
     for stepfrac in [.5**x for x in range(max_backtracks)]:
         x_new = x + stepfrac * fullstep
         set_flat_params_to(model, x_new)
-        fval_new = f(True).data[0]
+        fval_new = f(True).item()
         actual_improve = fval - fval_new
         expected_improve = expected_improve_full * stepfrac
         ratio = actual_improve / expected_improve
@@ -39,52 +38,53 @@ def line_search(model, f, x, fullstep, expected_improve_full, max_backtracks=10,
     return False, x
 
 
-def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_kl, damping, l2_reg, use_fim=True):
+def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_kl, damping, l2_reg, use_fim=False):
 
     """update critic"""
-    values_target = Variable(returns)
 
     def get_value_loss(flat_params):
-        set_flat_params_to(value_net, torch.Tensor(flat_params))
+        set_flat_params_to(value_net, Tensor(flat_params))
         for param in value_net.parameters():
             if param.grad is not None:
                 param.grad.data.fill_(0)
-        values_pred = value_net(Variable(states))
-        value_loss = (values_pred - values_target).pow(2).mean()
+        values_pred = value_net(states)
+        value_loss = (values_pred - returns).pow(2).mean()
 
         # weight decay
         for param in value_net.parameters():
             value_loss += param.pow(2).sum() * l2_reg
         value_loss.backward()
-        return value_loss.data.cpu().numpy()[0], get_flat_grad_from(value_net.parameters()).data.cpu().numpy()
+        return value_loss.item(), get_flat_grad_from(value_net.parameters()).cpu().numpy()
 
     flat_params, _, opt_info = scipy.optimize.fmin_l_bfgs_b(get_value_loss,
-                                                            get_flat_params_from(value_net).cpu().numpy(),
+                                                            get_flat_params_from(value_net).detach().cpu().numpy(),
                                                             maxiter=25)
     set_flat_params_to(value_net, torch.Tensor(flat_params))
 
     """update policy"""
-    fixed_log_probs = policy_net.get_log_prob(Variable(states, volatile=True), Variable(actions)).data
+    with torch.no_grad():
+        fixed_log_probs = policy_net.get_log_prob(states, actions)
     """define the loss function for TRPO"""
     def get_loss(volatile=False):
-        log_probs = policy_net.get_log_prob(Variable(states, volatile=volatile), Variable(actions))
-        action_loss = -Variable(advantages) * torch.exp(log_probs - Variable(fixed_log_probs))
-        return action_loss.mean()
+        with torch.set_grad_enabled(not volatile):
+            log_probs = policy_net.get_log_prob(states, actions)
+            action_loss = -advantages * torch.exp(log_probs - fixed_log_probs)
+            return action_loss.mean()
 
     """use fisher information matrix for Hessian*vector"""
     def Fvp_fim(v):
-        M, mu, info = policy_net.get_fim(Variable(states))
+        M, mu, info = policy_net.get_fim(states)
         mu = mu.view(-1)
         filter_input_ids = set() if policy_net.is_disc_action else set([info['std_id']])
 
-        t = Variable(ones(mu.size()), requires_grad=True)
+        t = ones(mu.size(), requires_grad=True)
         mu_t = (mu * t).sum()
         Jt = compute_flat_grad(mu_t, policy_net.parameters(), filter_input_ids=filter_input_ids, create_graph=True)
-        Jtv = (Jt * Variable(v)).sum()
-        Jv = torch.autograd.grad(Jtv, t, retain_graph=True)[0]
-        MJv = Variable(M * Jv.data)
+        Jtv = (Jt * v).sum()
+        Jv = torch.autograd.grad(Jtv, t)[0]
+        MJv = M * Jv.detach()
         mu_MJv = (MJv * mu).sum()
-        JTMJv = compute_flat_grad(mu_MJv, policy_net.parameters(), filter_input_ids=filter_input_ids, retain_graph=True).data
+        JTMJv = compute_flat_grad(mu_MJv, policy_net.parameters(), filter_input_ids=filter_input_ids).detach()
         JTMJv /= states.shape[0]
         if not policy_net.is_disc_action:
             std_index = info['std_index']
@@ -93,15 +93,15 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
 
     """directly compute Hessian*vector from KL"""
     def Fvp_direct(v):
-        kl = policy_net.get_kl(Variable(states))
+        kl = policy_net.get_kl(states)
         kl = kl.mean()
 
         grads = torch.autograd.grad(kl, policy_net.parameters(), create_graph=True)
         flat_grad_kl = torch.cat([grad.view(-1) for grad in grads])
 
-        kl_v = (flat_grad_kl * Variable(v)).sum()
+        kl_v = (flat_grad_kl * v).sum()
         grads = torch.autograd.grad(kl_v, policy_net.parameters())
-        flat_grad_grad_kl = torch.cat([grad.contiguous().view(-1) for grad in grads]).data
+        flat_grad_grad_kl = torch.cat([grad.contiguous().view(-1) for grad in grads]).detach()
 
         return flat_grad_grad_kl + v * damping
 
@@ -109,7 +109,7 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
 
     loss = get_loss()
     grads = torch.autograd.grad(loss, policy_net.parameters())
-    loss_grad = torch.cat([grad.view(-1) for grad in grads]).data
+    loss_grad = torch.cat([grad.view(-1) for grad in grads]).detach()
     stepdir = conjugate_gradients(Fvp, -loss_grad, 10)
 
     shs = 0.5 * (stepdir.dot(Fvp(stepdir)))

@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+Tensor = torch.Tensor
 DoubleTensor = torch.DoubleTensor
 FloatTensor = torch.FloatTensor
 LongTensor = torch.LongTensor
@@ -26,7 +27,7 @@ def set_flat_params_to(model, flat_params):
     prev_ind = 0
     for param in model.parameters():
         flat_size = int(np.prod(list(param.size())))
-        param.copy_(
+        param.data.copy_(
             flat_params[prev_ind:prev_ind + flat_size].view(param.size()))
         prev_ind += flat_size
 
