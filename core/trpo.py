@@ -4,7 +4,7 @@ from utils import *
 
 
 def conjugate_gradients(Avp_f, b, nsteps, rdotr_tol=1e-10):
-    x = zeros(b.size())
+    x = zeros(b.size()).to(b.get_device())
     r = b.clone()
     p = b.clone()
     rdotr = torch.dot(r, r)
