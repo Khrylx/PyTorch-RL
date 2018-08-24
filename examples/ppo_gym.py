@@ -113,7 +113,7 @@ def update_params(batch, i_iter):
         perm = LongTensor(perm).to(device)
 
         states, actions, returns, advantages, fixed_log_probs = \
-            states[perm], actions[perm], returns[perm], advantages[perm], fixed_log_probs[perm]
+            states[perm].clone(), actions[perm].clone(), returns[perm].clone(), advantages[perm].clone(), fixed_log_probs[perm].clone()
 
         for i in range(optim_iter_num):
             ind = slice(i * optim_batch_size, min((i + 1) * optim_batch_size, states.shape[0]))

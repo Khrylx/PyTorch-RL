@@ -15,8 +15,6 @@ from core.trpo import trpo_step
 from core.common import estimate_advantages
 from core.agent import Agent
 
-Tensor = DoubleTensor
-torch.set_default_tensor_type('torch.DoubleTensor')
 
 parser = argparse.ArgumentParser(description='PyTorch TRPO example')
 parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
