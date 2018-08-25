@@ -48,6 +48,6 @@ class DiscretePolicy(nn.Module):
 
     def get_fim(self, x):
         action_prob = self.forward(x)
-        M = action_prob.pow(-1).view(-1)
+        M = action_prob.pow(-1).view(-1).detach()
         return M, action_prob, {}
 
