@@ -11,14 +11,11 @@ from models.mlp_policy import Policy
 from models.mlp_critic import Value
 from models.mlp_policy_disc import DiscretePolicy
 from models.mlp_discriminator import Discriminator
-from torch.autograd import Variable
 from torch import nn
 from core.ppo import ppo_step
 from core.common import estimate_advantages
 from core.agent import Agent
 
-Tensor = DoubleTensor
-torch.set_default_tensor_type('torch.DoubleTensor')
 
 parser = argparse.ArgumentParser(description='PyTorch GAIL example')
 parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
@@ -27,8 +24,8 @@ parser.add_argument('--expert-traj-path', metavar='G',
                     help='path of the expert trajectories')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
-parser.add_argument('--log-std', type=float, default=0, metavar='G',
-                    help='log std for the policy (default: 0)')
+parser.add_argument('--log-std', type=float, default=-1.0, metavar='G',
+                    help='log std for the policy (default: -1.0)')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                     help='discount factor (default: 0.99)')
 parser.add_argument('--tau', type=float, default=0.95, metavar='G',
@@ -43,14 +40,15 @@ parser.add_argument('--num-threads', type=int, default=4, metavar='N',
                     help='number of threads for agent (default: 4)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
-                    help='minimal batch size per PPO update (default: 2048)')
+parser.add_argument('--min-batch-size', type=int, default=10000, metavar='N',
+                    help='minimal batch size per PPO update (default: 10000)')
 parser.add_argument('--max-iter-num', type=int, default=500, metavar='N',
                     help='maximal number of main iterations (default: 500)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
                     help='interval between training status logs (default: 10)')
 parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
+parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
 
 
@@ -60,30 +58,27 @@ def env_factory(thread_id):
     return env
 
 
+dtype = torch.float64
+torch.set_default_dtype(dtype)
+device = torch.device('cuda', index=args.gpu_index) if torch.cuda.is_available() else torch.device('cpu')
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
-if use_gpu:
-    torch.cuda.manual_seed_all(args.seed)
-
 env_dummy = env_factory(0)
 state_dim = env_dummy.observation_space.shape[0]
+action_dim = env_dummy.action_space.shape[0]
 is_disc_action = len(env_dummy.action_space.shape) == 0
-action_dim = (1 if is_disc_action else env_dummy.action_space.shape[0])
-ActionTensor = LongTensor if is_disc_action else DoubleTensor
+running_state = ZFilter((state_dim,), clip=5)
+# running_reward = ZFilter((1,), demean=False, clip=10)
 
-"""define actor, critic and discrimiator"""
+"""define actor and critic"""
 if is_disc_action:
     policy_net = DiscretePolicy(state_dim, env_dummy.action_space.n)
 else:
-    policy_net = Policy(state_dim, env_dummy.action_space.shape[0])
+    policy_net = Policy(state_dim, env_dummy.action_space.shape[0], log_std=args.log_std)
 value_net = Value(state_dim)
 discrim_net = Discriminator(state_dim + action_dim)
 discrim_criterion = nn.BCELoss()
-if use_gpu:
-    policy_net = policy_net.cuda()
-    value_net = value_net.cuda()
-    discrim_net = discrim_net.cuda()
-    discrim_criterion = discrim_criterion.cuda()
+to_device(device, policy_net, value_net, discrim_net, discrim_criterion)
 
 optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_rate)
 optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
@@ -91,7 +86,7 @@ optimizer_discrim = torch.optim.Adam(discrim_net.parameters(), lr=args.learning_
 
 # optimization epoch number and batch size for PPO
 optim_epochs = 5
-optim_batch_size = 4096
+optim_batch_size = 256
 
 # load trajectory
 expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
@@ -99,39 +94,37 @@ expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
 
 def expert_reward(state, action):
     state_action = Tensor(np.hstack([state, action]))
-    return -math.log(discrim_net(Variable(state_action, volatile=True)).data.numpy()[0])
+    with torch.no_grad():
+        return -math.log(discrim_net(state_action)[0].item())
 
 
 """create agent"""
-agent = Agent(env_factory, policy_net, custom_reward=expert_reward,
+agent = Agent(env_factory, policy_net, device, custom_reward=expert_reward,
               running_state=running_state, render=args.render, num_threads=args.num_threads)
 
 
 def update_params(batch, i_iter):
-    states = torch.from_numpy(np.stack(batch.state))
-    actions = torch.from_numpy(np.stack(batch.action))
-    rewards = torch.from_numpy(np.stack(batch.reward))
-    masks = torch.from_numpy(np.stack(batch.mask).astype(np.float64))
-    if use_gpu:
-        states, actions, rewards, masks = states.cuda(), actions.cuda(), rewards.cuda(), masks.cuda()
-    values = value_net(Variable(states, volatile=True)).data
-    fixed_log_probs = policy_net.get_log_prob(Variable(states, volatile=True), Variable(actions)).data
+    states = torch.from_numpy(np.stack(batch.state)).to(dtype).to(device)
+    actions = torch.from_numpy(np.stack(batch.action)).to(dtype).to(device)
+    rewards = torch.from_numpy(np.stack(batch.reward)).to(dtype).to(device)
+    masks = torch.from_numpy(np.stack(batch.mask)).to(dtype).to(device)
+    with torch.no_grad():
+        values = value_net(states)
+        fixed_log_probs = policy_net.get_log_prob(states, actions)
 
     """get advantage estimation from the trajectories"""
-    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, use_gpu)
+    advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
 
     lr_mult = max(1.0 - float(i_iter) / args.max_iter_num, 0)
 
     """update discriminator"""
-    for _ in range(3):
-        expert_state_actions = Tensor(expert_traj)
-        if use_gpu:
-            expert_state_actions = expert_state_actions.cuda()
-        g_o = discrim_net(Variable(torch.cat([states, actions], 1)))
-        e_o = discrim_net(Variable(expert_state_actions))
+    for _ in range(1):
+        expert_state_actions = torch.from_numpy(expert_traj).to(dtype).to(device)
+        g_o = discrim_net(torch.cat([states, actions], 1))
+        e_o = discrim_net(expert_state_actions)
         optimizer_discrim.zero_grad()
-        discrim_loss = discrim_criterion(g_o, Variable(ones((states.shape[0], 1)))) + \
-            discrim_criterion(e_o, Variable(zeros((expert_traj.shape[0], 1))))
+        discrim_loss = discrim_criterion(g_o, ones((states.shape[0], 1), device=device)) + \
+            discrim_criterion(e_o, zeros((expert_traj.shape[0], 1), device=device))
         discrim_loss.backward()
         optimizer_discrim.step()
 
@@ -140,11 +133,10 @@ def update_params(batch, i_iter):
     for _ in range(optim_epochs):
         perm = np.arange(states.shape[0])
         np.random.shuffle(perm)
-        perm = LongTensor(perm)
-        if use_gpu:
-            perm = perm.cuda()
+        perm = LongTensor(perm).to(device)
+
         states, actions, returns, advantages, fixed_log_probs = \
-            states[perm], actions[perm], returns[perm], advantages[perm], fixed_log_probs[perm]
+            states[perm].clone(), actions[perm].clone(), returns[perm].clone(), advantages[perm].clone(), fixed_log_probs[perm].clone()
 
         for i in range(optim_iter_num):
             ind = slice(i * optim_batch_size, min((i + 1) * optim_batch_size, states.shape[0]))
@@ -158,11 +150,9 @@ def update_params(batch, i_iter):
 def main_loop():
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
-        if use_gpu:
-            discrim_net.cpu()
+        discrim_net.to(torch.device('cpu'))
         batch, log = agent.collect_samples(args.min_batch_size)
-        if use_gpu:
-            discrim_net.cuda()
+        discrim_net.to(device)
 
         t0 = time.time()
         update_params(batch, i_iter)
@@ -173,11 +163,9 @@ def main_loop():
                 i_iter, log['sample_time'], t1-t0, log['avg_c_reward'], log['avg_reward']))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
-            if use_gpu:
-                policy_net.cpu(), value_net.cpu(), discrim_net.cpu()
+            to_device(torch.device('cpu'), policy_net, value_net, discrim_net)
             pickle.dump((policy_net, value_net, discrim_net), open(os.path.join(assets_dir(), 'learned_models/{}_gail.p'.format(args.env_name)), 'wb'))
-            if use_gpu:
-                policy_net.cuda(), value_net.cuda(), discrim_net.cuda()
+            to_device(device, policy_net, value_net, discrim_net)
 
         """clean up gpu memory"""
         torch.cuda.empty_cache()

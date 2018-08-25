@@ -26,5 +26,5 @@ class Discriminator(nn.Module):
         for affine in self.affine_layers:
             x = self.activation(affine(x))
 
-        prob = F.sigmoid(self.logic(x))
+        prob = torch.sigmoid(self.logic(x))
         return prob

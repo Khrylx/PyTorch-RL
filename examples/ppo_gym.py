@@ -22,8 +22,8 @@ parser.add_argument('--model-path', metavar='G',
                     help='path of pre-trained model')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
-parser.add_argument('--log-std', type=float, default=0, metavar='G',
-                    help='log std for the policy (default: 0)')
+parser.add_argument('--log-std', type=float, default=-1.0, metavar='G',
+                    help='log std for the policy (default: -1.0)')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                     help='discount factor (default: 0.99)')
 parser.add_argument('--tau', type=float, default=0.95, metavar='G',
@@ -38,8 +38,8 @@ parser.add_argument('--num-threads', type=int, default=4, metavar='N',
                     help='number of threads for agent (default: 4)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
-                    help='minimal batch size per PPO update (default: 2048)')
+parser.add_argument('--min-batch-size', type=int, default=10000, metavar='N',
+                    help='minimal batch size per PPO update (default: 10000)')
 parser.add_argument('--max-iter-num', type=int, default=500, metavar='N',
                     help='maximal number of main iterations (default: 500)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
@@ -85,7 +85,7 @@ optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate
 
 # optimization epoch number and batch size for PPO
 optim_epochs = 5
-optim_batch_size = 4096
+optim_batch_size = 256
 
 """create agent"""
 agent = Agent(env_factory, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads)

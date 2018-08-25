@@ -9,9 +9,6 @@ from itertools import count
 from utils import *
 
 
-Tensor = DoubleTensor
-torch.set_default_tensor_type('torch.DoubleTensor')
-
 parser = argparse.ArgumentParser(description='Save expert trajectory')
 parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
                     help='name of the environment to run')
@@ -25,12 +22,11 @@ parser.add_argument('--max-expert-state-num', type=int, default=50000, metavar='
                     help='maximal number of main iterations (default: 50000)')
 args = parser.parse_args()
 
+dtype = torch.float64
+torch.set_default_dtype(dtype)
 env = gym.make(args.env_name)
 env.seed(args.seed)
 torch.manual_seed(args.seed)
-if use_gpu:
-    torch.cuda.manual_seed_all(args.seed)
-
 is_disc_action = len(env.action_space.shape) == 0
 state_dim = env.observation_space.shape[0]
 
@@ -49,9 +45,9 @@ def main_loop():
         reward_episode = 0
 
         for t in range(10000):
-            state_var = Tensor(state).unsqueeze(0)
+            state_var = Tensor(state).unsqueeze(0).to(dtype)
             # choose mean action
-            action = policy_net(state_var)[0][0].cpu().numpy()
+            action = policy_net(state_var)[0][0].detach().numpy()
             # choose stochastic action
             # action = policy_net.select_action(state_var)[0].cpu().numpy()
             action = int(action) if is_disc_action else action.astype(np.float64)
