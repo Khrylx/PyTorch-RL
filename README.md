@@ -4,7 +4,7 @@ This repository contains:
 2. [Generative Adversarial Imitation Learning (GAIL)](https://arxiv.org/pdf/1606.03476.pdf)
 
 ## Important notes
-- The code only works for PyTorch 0.3.x right now.
+- The code now works for PyTorch 0.4. For PyTorch 0.3, please check out the 0.3 branch.
 - To run mujoco environments, first install [mujoco-py](https://github.com/openai/mujoco-py) and my [modified version of gym](https://github.com/Khrylx/gym) which supports mujoco 1.50.
 - If you have a GPU, I recommend setting the OMP_NUM_THREADS to 1 (PyTorch will create additional threads when performing computations which can damage the performance of multiprocessing. This problem is most serious with Linux, where multiprocessing can be even slower than a single thread):
 ```
