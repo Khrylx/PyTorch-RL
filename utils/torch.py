@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-Tensor = torch.Tensor
+tensor = torch.tensor
 DoubleTensor = torch.DoubleTensor
 FloatTensor = torch.FloatTensor
 LongTensor = torch.LongTensor

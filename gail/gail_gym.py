@@ -93,7 +93,7 @@ expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
 
 
 def expert_reward(state, action):
-    state_action = Tensor(np.hstack([state, action]))
+    state_action = tensor(np.hstack([state, action]), dtype=dtype)
     with torch.no_grad():
         return -math.log(discrim_net(state_action)[0].item())
 

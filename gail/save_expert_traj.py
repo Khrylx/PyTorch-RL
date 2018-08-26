@@ -45,7 +45,7 @@ def main_loop():
         reward_episode = 0
 
         for t in range(10000):
-            state_var = Tensor(state).unsqueeze(0).to(dtype)
+            state_var = tensor(state).unsqueeze(0).to(dtype)
             # choose mean action
             action = policy_net(state_var)[0][0].detach().numpy()
             # choose stochastic action

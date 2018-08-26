@@ -4,7 +4,9 @@ from utils import *
 
 
 def conjugate_gradients(Avp_f, b, nsteps, rdotr_tol=1e-10):
-    x = zeros(b.size()).to(b.get_device())
+    x = zeros(b.size())
+    if b.is_cuda:
+        x.to(b.get_device())
     r = b.clone()
     p = b.clone()
     rdotr = torch.dot(r, r)
@@ -43,7 +45,7 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
     """update critic"""
 
     def get_value_loss(flat_params):
-        set_flat_params_to(value_net, Tensor(flat_params))
+        set_flat_params_to(value_net, tensor(flat_params))
         for param in value_net.parameters():
             if param.grad is not None:
                 param.grad.data.fill_(0)
@@ -59,7 +61,7 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
     flat_params, _, opt_info = scipy.optimize.fmin_l_bfgs_b(get_value_loss,
                                                             get_flat_params_from(value_net).detach().cpu().numpy(),
                                                             maxiter=25)
-    set_flat_params_to(value_net, torch.Tensor(flat_params))
+    set_flat_params_to(value_net, tensor(flat_params))
 
     """update policy"""
     with torch.no_grad():
