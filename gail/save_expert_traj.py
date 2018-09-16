@@ -10,7 +10,7 @@ from utils import *
 
 
 parser = argparse.ArgumentParser(description='Save expert trajectory')
-parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
+parser.add_argument('--env-name', default="Hopper-v2", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--model-path', metavar='G',
                     help='name of the expert model')

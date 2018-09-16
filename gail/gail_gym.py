@@ -18,7 +18,7 @@ from core.agent import Agent
 
 
 parser = argparse.ArgumentParser(description='PyTorch GAIL example')
-parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
+parser.add_argument('--env-name', default="Hopper-v2", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--expert-traj-path', metavar='G',
                     help='path of the expert trajectories')
@@ -40,8 +40,8 @@ parser.add_argument('--num-threads', type=int, default=4, metavar='N',
                     help='number of threads for agent (default: 4)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=10000, metavar='N',
-                    help='minimal batch size per PPO update (default: 10000)')
+parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
+                    help='minimal batch size per PPO update (default: 2048)')
 parser.add_argument('--max-iter-num', type=int, default=500, metavar='N',
                     help='maximal number of main iterations (default: 500)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
@@ -87,8 +87,8 @@ optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate
 optimizer_discrim = torch.optim.Adam(discrim_net.parameters(), lr=args.learning_rate)
 
 # optimization epoch number and batch size for PPO
-optim_epochs = 5
-optim_batch_size = 256
+optim_epochs = 10
+optim_batch_size = 64
 
 # load trajectory
 expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))

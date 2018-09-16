@@ -16,7 +16,7 @@ from core.agent import Agent
 
 
 parser = argparse.ArgumentParser(description='PyTorch A2C example')
-parser.add_argument('--env-name', default="Hopper-v1", metavar='G',
+parser.add_argument('--env-name', default="Hopper-v2", metavar='G',
                     help='name of the environment to run')
 parser.add_argument('--model-path', metavar='G',
                     help='path of pre-trained model')
@@ -34,8 +34,8 @@ parser.add_argument('--num-threads', type=int, default=4, metavar='N',
                     help='number of threads for agent (default: 4)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
-parser.add_argument('--min-batch-size', type=int, default=10000, metavar='N',
-                    help='minimal batch size per A2C update (default: 10000)')
+parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
+                    help='minimal batch size per A2C update (default: 2048)')
 parser.add_argument('--max-iter-num', type=int, default=500, metavar='N',
                     help='maximal number of main iterations (default: 500)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',

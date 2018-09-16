@@ -5,7 +5,7 @@ This repository contains:
 
 ## Important notes
 - The code now works for PyTorch 0.4. For PyTorch 0.3, please check out the 0.3 branch.
-- To run mujoco environments, first install [mujoco-py](https://github.com/openai/mujoco-py) and my [modified version of gym](https://github.com/Khrylx/gym) which supports mujoco 1.50.
+- To run mujoco environments, first install [mujoco-py](https://github.com/openai/mujoco-py) and [gym](https://github.com/openai/gym).
 - If you have a GPU, I recommend setting the OMP_NUM_THREADS to 1 (PyTorch will create additional threads when performing computations which can damage the performance of multiprocessing. This problem is most serious with Linux, where multiprocessing can be even slower than a single thread):
 ```
 export OMP_NUM_THREADS=1
@@ -22,7 +22,7 @@ export OMP_NUM_THREADS=1
 * [Synchronous A3C (A2C)](https://arxiv.org/pdf/1602.01783.pdf) -> [examples/a2c_gym.py](https://github.com/Khrylx/PyTorch-RL/blob/master/examples/a2c_gym.py)
 
 ### Example
-* python examples/ppo_gym.py --env-name Hopper-v1
+* python examples/ppo_gym.py --env-name Hopper-v2
 
 ### Reference
 * [ikostrikov/pytorch-trpo](https://github.com/ikostrikov/pytorch-trpo)
@@ -31,6 +31,6 @@ export OMP_NUM_THREADS=1
 
 ## Generative Adversarial Imitation Learning (GAIL)
 ### To save trajectory
-* python gail/save_expert_traj.py --model-path assets/expert_traj/Hopper-v1_ppo.p
+* python gail/save_expert_traj.py --model-path assets/expert_traj/Hopper-v2_ppo.p
 ### To do imitation learning
-* python gail/gail_gym.py --env-name Hopper-v1 --expert-traj-path assets/expert_traj/Hopper-v1_expert_traj.p
+* python gail/gail_gym.py --env-name Hopper-v2 --expert-traj-path assets/expert_traj/Hopper-v2_expert_traj.p
