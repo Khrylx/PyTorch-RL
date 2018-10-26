@@ -6,8 +6,8 @@ import time
 
 
 def collect_samples(pid, queue, env, policy, custom_reward,
-                    mean_action, render, running_state, update_rs, min_batch_size):
-    torch.randn(pid, )
+                    mean_action, render, running_state, min_batch_size):
+    torch.randn(pid)
     log = dict()
     memory = Memory()
     num_steps = 0
@@ -22,7 +22,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     while num_steps < min_batch_size:
         state = env.reset()
         if running_state is not None:
-            state = running_state(state, update=update_rs)
+            state = running_state(state)
         reward_episode = 0
 
         for t in range(10000):
@@ -36,7 +36,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             next_state, reward, done, _ = env.step(action)
             reward_episode += reward
             if running_state is not None:
-                next_state = running_state(next_state, update=update_rs)
+                next_state = running_state(next_state)
 
             if custom_reward is not None:
                 reward = custom_reward(state, action)
@@ -99,9 +99,9 @@ def merge_log(log_list):
 
 class Agent:
 
-    def __init__(self, env_factory, policy, device, custom_reward=None,
+    def __init__(self, env, policy, device, custom_reward=None,
                  mean_action=False, render=False, running_state=None, num_threads=1):
-        self.env_factory = env_factory
+        self.env = env
         self.policy = policy
         self.device = device
         self.custom_reward = custom_reward
@@ -109,9 +109,6 @@ class Agent:
         self.running_state = running_state
         self.render = render
         self.num_threads = num_threads
-        self.env_list = []
-        for i in range(num_threads):
-            self.env_list.append(self.env_factory(i))
 
     def collect_samples(self, min_batch_size):
         t_start = time.time()
@@ -121,14 +118,14 @@ class Agent:
         workers = []
 
         for i in range(self.num_threads-1):
-            worker_args = (i+1, queue, self.env_list[i + 1], self.policy, self.custom_reward, self.mean_action,
-                           False, self.running_state, False, thread_batch_size)
+            worker_args = (i+1, queue, self.env, self.policy, self.custom_reward, self.mean_action,
+                           False, self.running_state, thread_batch_size)
             workers.append(multiprocessing.Process(target=collect_samples, args=worker_args))
         for worker in workers:
             worker.start()
 
-        memory, log = collect_samples(0, None, self.env_list[0], self.policy, self.custom_reward, self.mean_action,
-                                      self.render, self.running_state, True, thread_batch_size)
+        memory, log = collect_samples(0, None, self.env, self.policy, self.custom_reward, self.mean_action,
+                                      self.render, self.running_state, thread_batch_size)
 
         worker_logs = [None] * len(workers)
         worker_memories = [None] * len(workers)

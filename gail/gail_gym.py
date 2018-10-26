@@ -51,32 +51,30 @@ parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
 parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
 
-
-def env_factory(thread_id):
-    env = gym.make(args.env_name)
-    env.seed(args.seed + thread_id)
-    return env
-
-
 dtype = torch.float64
 torch.set_default_dtype(dtype)
 device = torch.device('cuda', index=args.gpu_index) if torch.cuda.is_available() else torch.device('cpu')
 if torch.cuda.is_available():
     torch.cuda.set_device(args.gpu_index)
-np.random.seed(args.seed)
-torch.manual_seed(args.seed)
-env_dummy = env_factory(0)
-state_dim = env_dummy.observation_space.shape[0]
-action_dim = env_dummy.action_space.shape[0]
-is_disc_action = len(env_dummy.action_space.shape) == 0
+
+"""environment"""
+env = gym.make(args.env_name)
+state_dim = env.observation_space.shape[0]
+is_disc_action = len(env.action_space.shape) == 0
+action_dim = 1 if is_disc_action else env.action_space.shape[0]
 running_state = ZFilter((state_dim,), clip=5)
 # running_reward = ZFilter((1,), demean=False, clip=10)
 
+"""seeding"""
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
+env.seed(args.seed)
+
 """define actor and critic"""
 if is_disc_action:
-    policy_net = DiscretePolicy(state_dim, env_dummy.action_space.n)
+    policy_net = DiscretePolicy(state_dim, env.action_space.n)
 else:
-    policy_net = Policy(state_dim, env_dummy.action_space.shape[0], log_std=args.log_std)
+    policy_net = Policy(state_dim, env.action_space.shape[0], log_std=args.log_std)
 value_net = Value(state_dim)
 discrim_net = Discriminator(state_dim + action_dim)
 discrim_criterion = nn.BCELoss()
@@ -101,7 +99,7 @@ def expert_reward(state, action):
 
 
 """create agent"""
-agent = Agent(env_factory, policy_net, device, custom_reward=expert_reward,
+agent = Agent(env, policy_net, device, custom_reward=expert_reward,
               running_state=running_state, render=args.render, num_threads=args.num_threads)
 
 
