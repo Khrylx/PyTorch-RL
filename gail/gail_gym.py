@@ -117,8 +117,6 @@ def update_params(batch, i_iter):
     """get advantage estimation from the trajectories"""
     advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
 
-    lr_mult = max(1.0 - float(i_iter) / args.max_iter_num, 0)
-
     """update discriminator"""
     for _ in range(1):
         expert_state_actions = torch.from_numpy(expert_traj).to(dtype).to(device)
@@ -146,7 +144,7 @@ def update_params(batch, i_iter):
                 states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
 
             ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
-                     advantages_b, fixed_log_probs_b, lr_mult, args.learning_rate, args.clip_epsilon, args.l2_reg)
+                     advantages_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
 
 
 def main_loop():
