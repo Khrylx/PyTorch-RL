@@ -4,9 +4,7 @@ from utils import *
 
 
 def conjugate_gradients(Avp_f, b, nsteps, rdotr_tol=1e-10):
-    x = zeros(b.size())
-    if b.is_cuda:
-        x.to(b.get_device())
+    x = zeros(b.size(), device=b.device)
     r = b.clone()
     p = b.clone()
     rdotr = torch.dot(r, r)
@@ -79,7 +77,7 @@ def trpo_step(policy_net, value_net, states, actions, returns, advantages, max_k
         mu = mu.view(-1)
         filter_input_ids = set() if policy_net.is_disc_action else set([info['std_id']])
 
-        t = ones(mu.size(), requires_grad=True)
+        t = ones(mu.size(), requires_grad=True, device=mu.device)
         mu_t = (mu * t).sum()
         Jt = compute_flat_grad(mu_t, policy_net.parameters(), filter_input_ids=filter_input_ids, create_graph=True)
         Jtv = (Jt * v).sum()

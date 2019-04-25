@@ -63,7 +63,7 @@ def compute_flat_grad(output, inputs, filter_input_ids=set(), retain_graph=False
     out_grads = []
     for i, param in enumerate(inputs):
         if i in filter_input_ids:
-            out_grads.append(zeros(param.view(-1).shape))
+            out_grads.append(zeros(param.view(-1).shape, device=param.device, dtype=param.dtype))
         else:
             out_grads.append(grads[j].view(-1))
             j += 1
