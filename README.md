@@ -12,7 +12,6 @@ export OMP_NUM_THREADS=1
 ```
 
 ## Features
-* Support CUDA. (x10 faster than CPU implementation)
 * Support discrete and continous action space.
 * Support multiprocessing for agent to collect samples in multiple environments simultaneously. (x8 faster than single thread)
 * Fast Fisher vector product calculation. For this part, Ankur kindly wrote a [blog](http://www.telesens.co/2018/06/09/efficiently-computing-the-fisher-vector-product-in-trpo/) explaining the implementation details.
@@ -31,6 +30,6 @@ export OMP_NUM_THREADS=1
 
 ## Generative Adversarial Imitation Learning (GAIL)
 ### To save trajectory
-* python gail/save_expert_traj.py --model-path assets/expert_traj/Hopper-v2_ppo.p
+* python gail/save_expert_traj.py --model-path assets/learned_models/Hopper-v2_ppo.p
 ### To do imitation learning
 * python gail/gail_gym.py --env-name Hopper-v2 --expert-traj-path assets/expert_traj/Hopper-v2_expert_traj.p
