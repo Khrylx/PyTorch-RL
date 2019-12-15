@@ -31,6 +31,7 @@ is_disc_action = len(env.action_space.shape) == 0
 state_dim = env.observation_space.shape[0]
 
 policy_net, _, running_state = pickle.load(open(args.model_path, "rb"))
+running_state.fix = True
 expert_traj = []
 
 

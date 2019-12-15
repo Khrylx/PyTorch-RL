@@ -54,9 +54,10 @@ class ZFilter:
         self.clip = clip
 
         self.rs = RunningStat(shape)
+        self.fix = False
 
     def __call__(self, x, update=True):
-        if update:
+        if update and not self.fix:
             self.rs.push(x)
         if self.demean:
             x = x - self.rs.mean
@@ -65,3 +66,4 @@ class ZFilter:
         if self.clip:
             x = np.clip(x, -self.clip, self.clip)
         return x
+

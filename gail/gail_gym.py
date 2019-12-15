@@ -24,8 +24,8 @@ parser.add_argument('--expert-traj-path', metavar='G',
                     help='path of the expert trajectories')
 parser.add_argument('--render', action='store_true', default=False,
                     help='render the environment')
-parser.add_argument('--log-std', type=float, default=-1.0, metavar='G',
-                    help='log std for the policy (default: -1.0)')
+parser.add_argument('--log-std', type=float, default=-0.0, metavar='G',
+                    help='log std for the policy (default: -0.0)')
 parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                     help='discount factor (default: 0.99)')
 parser.add_argument('--tau', type=float, default=0.95, metavar='G',
@@ -90,6 +90,7 @@ optim_batch_size = 64
 
 # load trajectory
 expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
+running_state.fix = True
 
 
 def expert_reward(state, action):
