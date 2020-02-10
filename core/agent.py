@@ -19,13 +19,15 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     max_c_reward = -1e6
     num_episodes = 0
 
+
+    lenght_lists=[]
     while num_steps < min_batch_size:
         state = env.reset()
         if running_state is not None:
             state = running_state(state)
         reward_episode = 0
 
-        for t in range(10000):
+        for t in range(250):
             state_var = tensor(state).unsqueeze(0)
             with torch.no_grad():
                 if mean_action:
@@ -33,7 +35,8 @@ def collect_samples(pid, queue, env, policy, custom_reward,
                 else:
                     action = policy.select_action(state_var)[0].numpy()
             action = int(action) if policy.is_disc_action else action.astype(np.float64)
-            next_state, reward, done, _ = env.step(action)
+
+            next_state, reward, done, _ = env.step(np.clip(action*100,a_min=-100, a_max=100))
             reward_episode += reward
             if running_state is not None:
                 next_state = running_state(next_state)
@@ -50,11 +53,13 @@ def collect_samples(pid, queue, env, policy, custom_reward,
 
             if render:
                 env.render()
-            if done:
+# /            if (done) or ((t%249 ==0) and t>0):
+            if (done):
+
                 break
-
+        
             state = next_state
-
+        lenght_lists.append(t)
         # log stats
         num_steps += (t + 1)
         num_episodes += 1
@@ -68,6 +73,12 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     log['avg_reward'] = total_reward / num_episodes
     log['max_reward'] = max_reward
     log['min_reward'] = min_reward
+    log['lenght_mean'] = np.mean(lenght_lists)
+    log['lenght_min'] = np.min(lenght_lists)
+    log['lenght_max'] = np.max(lenght_lists)
+    log['lenght_std'] = np.std(lenght_lists)
+
+
     if custom_reward is not None:
         log['total_c_reward'] = total_c_reward
         log['avg_c_reward'] = total_c_reward / num_steps
