@@ -65,7 +65,7 @@ if torch.cuda.is_available():
 
 """environment"""
 # env = gym.make(args.env_name)
-env = DroneEnv(random=args.env_reset_mode,seed=42)
+env = DroneEnv(random=args.env_reset_mode,seed=args.seed)
 
 state_dim = env.observation_space.shape[0]
 is_disc_action = len(env.action_space.shape) == 0

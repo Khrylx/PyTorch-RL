@@ -4,11 +4,11 @@
 
 SEED=42
 # CUDA=True
-ENV_NAME=Teste
-NUM_EPOCHS=500
+ENV_NAME=Teste_3
+NUM_EPOCHS=2000
 env_reset_mode=Discretized_Uniform
 
-MODEL_INTERVAL=10
+MODEL_INTERVAL=50
 
 experiment_name=${PREFIX}_Reward_${REWARD_FUNCTION}_lr_${learning_rate}_bat_${batch_size}_net_${net_size}_buff_${buffer_size}_numsteps_${num_steps_until_train}_numtrainperstep_${num_trains_per_step}_before_${min_num_steps_before_training}_reset_${env_reset_mode}
 

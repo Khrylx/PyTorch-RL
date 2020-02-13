@@ -17,8 +17,16 @@ def collect_samples():
     num_steps = 0
 
     expert_traj = []
+        
+
     for i_episode in count():
 
+        print('count = ',i_episode)
+        if i_episode % 5 == 0:
+            env.restart=True
+            env.reset()
+            env.restart=False
+        
         state = env.reset()
         state = running_state(state)
         reward_episode = 0
