@@ -74,4 +74,5 @@ def main_loop():
 
 main_loop()
 expert_traj = np.stack(expert_traj)
-pickle.dump((expert_traj, running_state), open(os.path.join(assets_dir(), 'expert_traj/{}_expert_traj.p'.format(args.env_name)), 'wb'))
+pickle.dump((expert_traj, running_state), open(os.path.join(assets_dir(), 'expert_traj/{}_expert_traj_itrs_{}.p'.format(\
+                    args.env_name, args.max-expert-state-num)), 'wb'))

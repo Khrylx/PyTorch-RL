@@ -19,6 +19,16 @@ from core.agent import Agent
 
 from larocs_sim.envs.drone_env import DroneEnv
 
+import csv
+
+    
+def check_dir(file_name):
+    directory = os.path.dirname(file_name)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
+
 parser = argparse.ArgumentParser(description='PyTorch GAIL example')
 parser.add_argument('--env-name', default="Hopper-v2", metavar='G',
                     help='name of the environment to run')
@@ -40,6 +50,10 @@ parser.add_argument('--learning-rate', type=float, default=3e-4, metavar='G',
                     help='gae (default: 3e-4)')
 parser.add_argument('--clip-epsilon', type=float, default=0.2, metavar='N',
                     help='clipping epsilon for PPO')
+parser.add_argument('--optim-epochs', type=int, default=10,
+                    help='epochs for the internal optimization')
+parser.add_argument('--optim-batch-size', type=int, default=64,
+                    help='min_batch for the internal optimzation part')
 parser.add_argument('--num-threads', type=int, default=1, metavar='N',
                     help='number of threads for agent (default: 1)')
 parser.add_argument('--seed', type=int, default=1, metavar='N',
@@ -53,6 +67,10 @@ parser.add_argument('--log-interval', type=int, default=1, metavar='N',
 parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
 parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
+parser.add_argument('--save_path', type=str,help="path to save model pickle and log file", default='DEFAULT_DIR')
+
+
+
 args = parser.parse_args()
 
 dtype = torch.float64
@@ -99,10 +117,9 @@ optimizer_discrim = torch.optim.Adam(discrim_net.parameters(), lr=args.learning_
 
 
 
-# optimization epoch number and batch size for PPO
-optim_epochs = 10
-optim_batch_size = 64
-
+# optimization epoch number and batch size for PPO	
+optim_epochs = args.optim_epochs	
+optim_batch_size = args.optim_batch_size
 # load trajectory
 expert_traj, running_state = pickle.load(open(args.expert_traj_path, "rb"))
 running_state.fix = True
@@ -121,6 +138,13 @@ def expert_reward(state, action):
 agent = Agent(env, policy_net, device, custom_reward=expert_reward,
               running_state=running_state, render=args.render, num_threads=args.num_threads)
 
+
+
+# Set save/restore paths	
+save_path = os.path.join('../checkpoint/', args.save_path) +'_GAIL/'	
+check_dir(save_path)	
+
+# env.shutdown(); import sys ; sys.exit(0)
 
 def update_params(batch, i_iter):
     states = torch.from_numpy(np.stack(batch.state)).to(dtype).to(device)
@@ -165,10 +189,29 @@ def update_params(batch, i_iter):
 
 
 def main_loop():
+
+    # list_cols = ['num_steps', 'num_episodes', 'total_reward', 'avg_reward', 'max_reward', \
+    # 'min_reward', 'lenght_mean', 'lenght_min','lenght_max','lenght_std', 'sample_time']
+
+    list_cols = ['num_steps', 'avg_c_reward','avg_reward']
+
+    with open(os.path.join(save_path,'progress.csv'), 'w') as outcsv:	
+        writer = csv.writer(outcsv, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)	
+        writer.writerow(list_cols)	
+    
+    begin=time.time()	
     for i_iter in range(args.max_iter_num):
+
+        env.restart=True ## Hacky because Pyrep breaks the Drone!	
+        env.reset()	
+        env.restart=False	
+
+
+
         """generate multiple trajectories that reach the minimum batch_size"""
         discrim_net.to(torch.device('cpu'))
         batch, log = agent.collect_samples(args.min_batch_size)
+        print('Done batching')	
         discrim_net.to(device)
 
         t0 = time.time()
@@ -176,17 +219,29 @@ def main_loop():
         t1 = time.time()
 
         if i_iter % args.log_interval == 0:
+            print("LOG KEYS = ", list_cols)	
             print('{}\tT_sample {:.4f}\tT_update {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}'.format(
                 i_iter, log['sample_time'], t1-t0, log['avg_c_reward'], log['avg_reward']))
 
+            # new_list=[]	
+            # for col in list_cols:	
+                # new_list.append(log[col])	
+            new_list = [log[k] for k in log.keys() if k in list_cols]
+            with open(os.path.join(save_path,'progress.csv'), 'a') as csvfile:	
+                rew_writer = csv.writer(csvfile, delimiter=';',	
+                            quotechar='|', quoting=csv.QUOTE_MINIMAL)	
+                rew_writer.writerow(new_list)	
+
+        
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             to_device(torch.device('cpu'), policy_net, value_net, discrim_net)
-            pickle.dump((policy_net, value_net, discrim_net), open(os.path.join(assets_dir(), 'learned_models/{}_gail.p'.format(args.env_name)), 'wb'))
+            pickle.dump((policy_net, value_net, discrim_net), \
+            open(os.path.join(save_path,'GAIL_{0}_itr_{1}.p'.format(args.env_name, i_iter)), 'wb'))
             to_device(device, policy_net, value_net, discrim_net)
 
         """clean up gpu memory"""
         torch.cuda.empty_cache()
-
+        print('Time so far = {0:.2f} on iter = {1}'.format(time.time()-begin, i_iter))
 
 main_loop()
 
