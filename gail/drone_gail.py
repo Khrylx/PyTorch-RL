@@ -153,7 +153,7 @@ def update_params(batch, i_iter):
     masks = torch.from_numpy(np.stack(batch.mask)).to(dtype).to(device)
     with torch.no_grad():
         values = value_net(states)
-        fixed_log_probs = policy_net.get_log_prob(states, actions)
+        fixed_log_probs , act_mean, act_std = policy_net.get_log_prob(states, actions)
 
     """get advantage estimation from the trajectories"""
     advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
@@ -184,28 +184,33 @@ def update_params(batch, i_iter):
             states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
                 states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
 
-            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
+     
+            policy_surr, value_loss, ev, clip_frac, entropy, approxkl = ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
                      advantages_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
 
-
+    return discrim_loss.item(), policy_surr, value_loss, ev, clip_frac, entropy, approxkl
 def main_loop():
 
-    # list_cols = ['num_steps', 'num_episodes', 'total_reward', 'avg_reward', 'max_reward', \
-    # 'min_reward', 'lenght_mean', 'lenght_min','lenght_max','lenght_std', 'sample_time']
+    # list_cols = ['num_steps', 'avg_c_reward','avg_reward','avg_c_reward_per_episode']
 
-    list_cols = ['num_steps', 'avg_c_reward','avg_reward']
-
+    list_cols =  ['num_steps','num_episodes','total_reward','avg_reward','max_reward','min_reward',\
+        'lenght_mean','lenght_min','lenght_max','lenght_std','total_c_reward',\
+        'avg_c_reward','avg_c_reward_per_episode','max_c_reward','min_c_reward']
+    algo_cols = ['discrim_loss','policy_loss','value_loss','explained_variance', \
+                'clipfrac','entropy','aproxkl']
     with open(os.path.join(save_path,'progress.csv'), 'w') as outcsv:	
         writer = csv.writer(outcsv, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)	
-        writer.writerow(list_cols)	
+        writer.writerow(list_cols + algo_cols)	
     
     begin=time.time()	
     for i_iter in range(args.max_iter_num):
+        print()
 
         env.restart=True ## Hacky because Pyrep breaks the Drone!	
         env.reset()	
         env.restart=False	
 
+        print()
 
 
         """generate multiple trajectories that reach the minimum batch_size"""
@@ -215,22 +220,33 @@ def main_loop():
         discrim_net.to(device)
 
         t0 = time.time()
-        update_params(batch, i_iter)
+        loss_discrim, loss_policy, loss_value, ev, clipfrac, entropy, approxkl = update_params(batch, i_iter)
         t1 = time.time()
 
-        if i_iter % args.log_interval == 0:
-            print("LOG KEYS = ", list_cols)	
-            print('{}\tT_sample {:.4f}\tT_update {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}'.format(
-                i_iter, log['sample_time'], t1-t0, log['avg_c_reward'], log['avg_reward']))
+        print('Loss_discrim = {0:.4f}'.format(loss_discrim))
+        print('Loss_policy = {0:.4f}'.format(loss_policy))
+        print('Loss_value = {0:.4f}'.format(loss_value))
+        print('Explained variance = {0:.3f}'.format(ev))
+        print('clipfrac = {0:.5f}'.format(clipfrac))
+        print('entropy = {0:.5f}'.format(entropy))
+        print('approxkl = {0:.5f}'.format(approxkl))
+        algo_cols_values = [loss_discrim, loss_policy, loss_value, ev, clipfrac, entropy, approxkl]
 
-            # new_list=[]	
-            # for col in list_cols:	
-                # new_list.append(log[col])	
+
+
+
+        if i_iter % args.log_interval == 0:
+            # print("LOG KEYS = ", list_cols)	
+            print()
+            print('{}\tT_sample {:.4f}\tT_update {:.4f}\texpert_R_avg {:.2f}\tR_avg {:.2f}\tCustom_per_episode {:.2f}'.format(
+                i_iter, log['sample_time'], t1-t0, log['avg_c_reward'], log['avg_reward'], log['avg_c_reward_per_episode']))
+            print()
+
             new_list = [log[k] for k in log.keys() if k in list_cols]
             with open(os.path.join(save_path,'progress.csv'), 'a') as csvfile:	
                 rew_writer = csv.writer(csvfile, delimiter=';',	
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)	
-                rew_writer.writerow(new_list)	
+                rew_writer.writerow(new_list + algo_cols_values)	
 
         
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:

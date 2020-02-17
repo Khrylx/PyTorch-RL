@@ -12,7 +12,7 @@ from utils import *
 
 
 
-def collect_samples():
+def collect_samples(deterministic=False, use_only_sucess_runs = True):
     #torch.randn(pid)
     num_steps = 0
 
@@ -30,22 +30,36 @@ def collect_samples():
         state = env.reset()
         state = running_state(state)
         reward_episode = 0
-
+        last_traj = []
         for t in range(args.H):
-            if num_steps >= args.max_expert_state_num:
-                return expert_traj
-            
+            if use_only_sucess_runs:
+                if len(expert_traj) >= np.floor(args.max_expert_state_num/args.H):
+                    expert_traj = np.concatenate(expert_traj)
+
+                    return expert_traj
+            else:
+                if num_steps >= args.max_expert_state_num:
+                    expert_traj = np.stack(expert_traj)[:args.max_expert_state_num]
+
+                    return expert_traj
+
+
             state_var = tensor(state).unsqueeze(0).to(dtype)
             with torch.no_grad():
-                action = policy_net(state_var)[0][0].numpy() ## Chose mean action
+                if deterministic:
+                    action = policy_net(state_var)[0][0].numpy() ## Chose mean action
+                else:
+                    action = policy_net.select_action(state_var)[0].numpy() ## Chose mean action
 
             action = int(action) if is_disc_action else action.astype(np.float64)
-
             next_state, reward, done, _ = env.step(np.clip(action*100,a_min=-100, a_max=100))
             next_state = running_state(next_state)
 
-            expert_traj.append(np.hstack([state, action]))
-            
+            if use_only_sucess_runs:
+                last_traj.append(np.hstack([state, action]))
+            else:
+                expert_traj.append(np.hstack([state, action]))
+
             mask = 0 if done else 1
             reward_episode += reward
 
@@ -55,12 +69,14 @@ def collect_samples():
                 break
         
             state = next_state
-        
+        if use_only_sucess_runs == True:
+            if t == (args.H-1):
+                expert_traj.append(last_traj)
+
         print("Episode Reward = {0:.2f}".format(reward_episode))
         num_steps += (t + 1)
 
 
-    return expert_traj
 
 
 parser = argparse.ArgumentParser(description='Save expert trajectory')
@@ -76,6 +92,9 @@ parser.add_argument('--H', type=int, default=250, metavar='N',
                     help='Time horizon of each episode (default: 250)')
 parser.add_argument('--env_reset_mode', default="Discretized_Uniform",
                     help='Type of env initialization')
+parser.add_argument('--deterministic', action='store_true', default=False,
+                    help='Get rollout with deterministic action render the environment')
+
 args = parser.parse_args()
 
 
@@ -93,13 +112,15 @@ expert_traj = []
 
 
 
+expert_traj = collect_samples(deterministic = args.deterministic,  use_only_sucess_runs = True)
 
-expert_traj = collect_samples()
+print(expert_traj.shape)
+if args.deterministic:
+    type_policy='deterministic'
+else:
+    type_policy='stochasthic'
+    
+pickle.dump((expert_traj, running_state), open(os.path.join(assets_dir(), 'expert_traj/{}_expert_traj_{}_itrs_{}.p'.format(\
+                    args.env_name, type_policy, args.max_expert_state_num)), 'wb'))
 
-
-
-
-expert_traj = np.stack(expert_traj)
-env.shutdown(); import sys ; sys.exit(0)
-
-pickle.dump((expert_traj, running_state), open(os.path.join(assets_dir(), 'expert_traj/{}_expert_traj.p'.format(args.env_name)), 'wb'))
+env.shutdown()                    

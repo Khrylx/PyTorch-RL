@@ -1,3 +1,4 @@
 assets/learned_models/
 __pycache__/ 
 checkpoint/
+assets/

@@ -82,6 +82,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     if custom_reward is not None:
         log['total_c_reward'] = total_c_reward
         log['avg_c_reward'] = total_c_reward / num_steps
+        log['avg_c_reward_per_episode'] = total_c_reward / num_episodes
         log['max_c_reward'] = max_c_reward
         log['min_c_reward'] = min_c_reward
 

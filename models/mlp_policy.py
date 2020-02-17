@@ -38,9 +38,11 @@ class Policy(nn.Module):
 
     def select_action(self, x):
         action_mean, _, action_std = self.forward(x)
+        
         action = torch.normal(action_mean, action_std)
         return action
-
+    
+   
     def get_kl(self, x):
         mean1, log_std1, std1 = self.forward(x)
 
@@ -52,7 +54,10 @@ class Policy(nn.Module):
 
     def get_log_prob(self, x, actions):
         action_mean, action_log_std, action_std = self.forward(x)
-        return normal_log_density(actions, action_mean, action_log_std, action_std)
+        return normal_log_density(actions, action_mean, action_log_std, action_std), action_mean, action_std
+    
+    def get_entropy(self,std):
+        return normal_entropy(std)
 
     def get_fim(self, x):
         mean, _, _ = self.forward(x)
