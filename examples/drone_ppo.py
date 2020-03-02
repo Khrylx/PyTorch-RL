@@ -18,7 +18,12 @@ from larocs_sim.envs.drone_env import DroneEnv
 import csv
 
 
-    
+def terminate():
+    try:
+        env.shutdown();import sys; sys.exit(0)
+    except:
+        import sys; sys.exit(0)
+
 def check_dir(file_name):
     directory = os.path.dirname(file_name)
     if not os.path.exists(directory):
@@ -65,16 +70,16 @@ parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
 parser.add_argument('--save_path', type=str, \
                     help="path to save model pickle and log file", default='DEFAULT_DIR')
-parser.add_argument('--two-losses', action='store_true', default=False, \
+parser.add_argument('--two-losses', type=int, default=1, choices = [0,1], \
                     help="Whether to use separated losses",)
-
-
-
-
-
 
 parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
+
+
+
+
+
 
 dtype = torch.float64
 torch.set_default_dtype(dtype)
@@ -111,8 +116,8 @@ policy_net.to(device)
 value_net.to(device)
 
 
-# optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_rate)
-# optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
+optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_rate)
+optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
 
 params = list(policy_net.parameters()) + list(value_net.parameters())
 unique_optimizer = torch.optim.Adam(params, lr=args.learning_rate)
@@ -158,10 +163,6 @@ def update_params(batch, i_iter):
     print('MSE mean = ', (returns-values).pow(2).mean())
     print('MSE std = ', (returns-values).pow(2).std())
     
-
-
-
-
     """perform mini-batch PPO update"""
     optim_iter_num = int(math.ceil(states.shape[0] / optim_batch_size))
     for epoc in range(optim_epochs):
@@ -179,9 +180,8 @@ def update_params(batch, i_iter):
 
             
             if args.two_losses:
-                print('ok')
                 policy_surr, value_loss, ev, clipfrac, entropy, approxkl = ppo_step_two_losses(policy_net, value_net, \
-                unique_optimizer, 1, states_b, actions_b, returns_b,
+                optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
                         advantages_b, values_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
             else:
                 policy_surr, value_loss, ev, clipfrac, entropy, approxkl = ppo_step_one_loss(policy_net, value_net, \
@@ -189,7 +189,6 @@ def update_params(batch, i_iter):
                         advantages_b, values_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
             
             list_value_loss.append(value_loss)
-
         print('Epoch = {0} | Mean = {1} | STD = {2}'.format(epoc, np.mean(list_value_loss), np.std(list_value_loss)))
 
 def main_loop():

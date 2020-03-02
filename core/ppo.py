@@ -5,7 +5,7 @@ from torch.distributions import MultivariateNormal, Normal
 
 def ppo_step_one_loss(policy_net, value_net, unique_optimizer, optim_value_iternum, states, actions,
              returns, advantages,values, fixed_log_probs, clip_epsilon, \
-             l2_reg, ent_coef=0.01, vf_coef = 0.5, clip_value=False):
+             l2_reg, ent_coef=0.01, vf_coef = 0.5, clip_value=True):
 
 
     OLDVPRED = values
@@ -75,12 +75,13 @@ def ppo_step_two_losses(policy_net, value_net, optimizer_policy, optimizer_value
             values_pred = value_net(states)
             with torch.no_grad():
                 # vpredclipped = OLDVPRED + torch.clamp(value_net(states) - OLDVPRED,min =  - clip_epsilon, max =  clip_epsilon)
-                vpredclipped = OLDVPRED + torch.clamp(value_net(states) - OLDVPRED,min =  - 1, max =  1)
+                vpredclipped = OLDVPRED + torch.clamp(value_net(states) - OLDVPRED,min =  - 150, max =  150)
 
             vf_losses1 = (values_pred - returns).pow(2)
             # Clipped value
             vf_losses2 = (vpredclipped - returns).pow(2)
             value_loss = .5 * torch.max(vf_losses1, vf_losses2).mean()
+
         else:
             values_pred = value_net(states)
             value_loss = (values_pred - returns).pow(2).mean()
