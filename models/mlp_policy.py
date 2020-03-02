@@ -36,11 +36,29 @@ class Policy(nn.Module):
 
         return action_mean, action_log_std, action_std
 
-    def select_action(self, x):
+    
+    
+    
+    def select_action_deterministic(self, x):
         action_mean, _, action_std = self.forward(x)
-        
-        action = torch.normal(action_mean, action_std)
+        action = torch.tanh(action_mean).detach().cpu()#.numpy()
+
         return action
+
+
+
+
+    def select_action_stochastic(self, x):
+
+        action_mean, _, action_std = self.forward(x)
+         
+        action = torch.normal(action_mean, action_std)
+
+        action = torch.tanh(action).detach().cpu()#.numpy()
+
+        return action
+     
+
     
    
     def get_kl(self, x):

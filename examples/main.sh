@@ -15,8 +15,8 @@ log_interval=1
 CLIP_EPSILON=0.2
 MINBATCH=2048
 lr=0.0003
-OPTIM_EPOCHS=10
-OPTIM_BATCHSIZE=64
+OPTIM_EPOCHS=15
+OPTIM_BATCHSIZE=256
 
 
 
@@ -24,6 +24,7 @@ export OMP_NUM_THREADS=1
 python drone_ppo.py --env-name=${ENV_NAME} --env_reset_mode=${env_reset_mode} --seed=${SEED} \
 --max-iter-num=${NUM_EPOCHS} --save-model-interval=${MODEL_INTERVAL} --log-interval=${log_interval} --clip-epsilon=${CLIP_EPSILON} \
 --min-batch-size=${MINBATCH} --learning-rate=${lr} --optim-epochs=${OPTIM_EPOCHS} --optim-batch-size=${OPTIM_BATCHSIZE} \
---save_path=name_${ENV_NAME}_clip_${CLIP_EPSILON}_minbatch_${MINBATCH}_lr_${lr}_optepochs_${OPTIM_EPOCHS}_optbatchs_${OPTIM_BATCHSIZE}_init_${env_reset_mode}_seed_${SEED}
+--save_path=name_${ENV_NAME}_clip_${CLIP_EPSILON}_minbatch_${MINBATCH}_lr_${lr}_optepochs_${OPTIM_EPOCHS}_optbatchs_${OPTIM_BATCHSIZE}_init_${env_reset_mode}_seed_${SEED}\
+--two-losses
 
 

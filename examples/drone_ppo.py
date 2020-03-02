@@ -10,7 +10,7 @@ from utils import *
 from models.mlp_policy import Policy
 from models.mlp_critic import Value
 from models.mlp_policy_disc import DiscretePolicy
-from core.ppo import ppo_step
+from core.ppo import ppo_step_one_loss, ppo_step_two_losses
 from core.common import estimate_advantages
 from core.agent import Agent
 
@@ -65,6 +65,9 @@ parser.add_argument('--save-model-interval', type=int, default=0, metavar='N',
                     help="interval between saving model (default: 0, means don't save)")
 parser.add_argument('--save_path', type=str, \
                     help="path to save model pickle and log file", default='DEFAULT_DIR')
+parser.add_argument('--two-losses', action='store_true', default=False, \
+                    help="Whether to use separated losses",)
+
 
 
 
@@ -82,7 +85,12 @@ if torch.cuda.is_available():
 """environment"""
 env = DroneEnv(random=args.env_reset_mode,seed=args.seed)
 
-state_dim = env.observation_space.shape[0]
+
+action_dim = env.action_space.shape[0]
+state_dim = env.observation_space[0]
+# 
+# 
+# state_dim = env.observation_space.shape[0]
 is_disc_action = len(env.action_space.shape) == 0
 running_state = ZFilter((state_dim,), clip=5)
 # running_reward = ZFilter((1,), demean=False, clip=10)
@@ -96,15 +104,18 @@ if args.model_path is None:
         policy_net = DiscretePolicy(state_dim, env.action_space.n)
     else:
         policy_net = Policy(state_dim, env.action_space.shape[0], log_std=args.log_std)
-    value_net = Value(state_dim)
+    value_net = Value(state_dim, hidden_size=(256,256), activation='relu')
 else:
     policy_net, value_net, running_state,  = pickle.load(open(args.model_path, "rb"))
 policy_net.to(device)
 value_net.to(device)
 
 
-optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_rate)
-optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
+# optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=args.learning_rate)
+# optimizer_value = torch.optim.Adam(value_net.parameters(), lr=args.learning_rate)
+
+params = list(policy_net.parameters()) + list(value_net.parameters())
+unique_optimizer = torch.optim.Adam(params, lr=args.learning_rate)
 
 # optimization epoch number and batch size for PPO
 optim_epochs = args.optim_epochs
@@ -132,29 +143,54 @@ def update_params(batch, i_iter):
     masks = torch.from_numpy(np.stack(batch.mask)).to(dtype).to(device)
     with torch.no_grad():
         values = value_net(states)
-        fixed_log_probs = policy_net.get_log_prob(states, actions)
+        fixed_log_probs = policy_net.get_log_prob(states, actions)[0]
+
+    rewards = (rewards - rewards.mean())/(rewards.std() + 1e-10)
 
     """get advantage estimation from the trajectories"""
     advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
 
+    print('Returns mean = ', returns.mean())
+    print('Returns std = ', returns.std())
+    print('Values mean = ', values.mean())
+    print('Values std = ', values.std())
+    
+    print('MSE mean = ', (returns-values).pow(2).mean())
+    print('MSE std = ', (returns-values).pow(2).std())
+    
+
+
+
+
     """perform mini-batch PPO update"""
     optim_iter_num = int(math.ceil(states.shape[0] / optim_batch_size))
-    for _ in range(optim_epochs):
+    for epoc in range(optim_epochs):
+        list_value_loss = []
+
         perm = np.arange(states.shape[0])
         np.random.shuffle(perm)
         perm = LongTensor(perm).to(device)
-
-        states, actions, returns, advantages, fixed_log_probs = \
-            states[perm].clone(), actions[perm].clone(), returns[perm].clone(), advantages[perm].clone(), fixed_log_probs[perm].clone()
-
+        states, actions, returns, advantages, fixed_log_probs,values = \
+            states[perm].clone(), actions[perm].clone(), returns[perm].clone(), advantages[perm].clone(), fixed_log_probs[perm].clone(), values[perm].clone()
         for i in range(optim_iter_num):
             ind = slice(i * optim_batch_size, min((i + 1) * optim_batch_size, states.shape[0]))
-            states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b = \
-                states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind]
+            states_b, actions_b, advantages_b, returns_b, fixed_log_probs_b, values_b = \
+                states[ind], actions[ind], advantages[ind], returns[ind], fixed_log_probs[ind], values[ind]
 
-            ppo_step(policy_net, value_net, optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
-                     advantages_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
+            
+            if args.two_losses:
+                print('ok')
+                policy_surr, value_loss, ev, clipfrac, entropy, approxkl = ppo_step_two_losses(policy_net, value_net, \
+                unique_optimizer, 1, states_b, actions_b, returns_b,
+                        advantages_b, values_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
+            else:
+                policy_surr, value_loss, ev, clipfrac, entropy, approxkl = ppo_step_one_loss(policy_net, value_net, \
+                unique_optimizer, 1, states_b, actions_b, returns_b,
+                        advantages_b, values_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
+            
+            list_value_loss.append(value_loss)
 
+        print('Epoch = {0} | Mean = {1} | STD = {2}'.format(epoc, np.mean(list_value_loss), np.std(list_value_loss)))
 
 def main_loop():
 
@@ -172,10 +208,10 @@ def main_loop():
 
     begin=time.time()
     for i_iter in range(args.max_iter_num):
-        
-        env.restart=True ## Hacky because Pyrep breaks the Drone!
-        env.reset()
-        env.restart=False
+        if i_iter % 5 ==0:
+            env.restart=True ## Hacky because Pyrep breaks the Drone!
+            env.reset()
+            env.restart=False
 
         print('Iter = ', i_iter)
         """generate multiple trajectories that reach the minimum batch_size"""

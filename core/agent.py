@@ -31,9 +31,10 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             state_var = tensor(state).unsqueeze(0)
             with torch.no_grad():
                 if mean_action:
-                    action = policy(state_var)[0][0].numpy()
+                    action = policy.select_action_deterministic.numpy()
                 else:
-                    action = policy.select_action(state_var)[0].numpy()
+                    action = policy.select_action_stochastic(state_var)[0].numpy()
+
             action = int(action) if policy.is_disc_action else action.astype(np.float64)
 
             next_state, reward, done, _ = env.step(np.clip(action*100,a_min=-100, a_max=100))

@@ -1,0 +1,298 @@
+[33mcommit a068ffe8f16992894d1445e9716201d0279cb09f[m[33m ([m[1;36mHEAD[m[33m)[m
+Author: gabriel <gabrielmoraesbarros@gmail.com>
+Date:   Mon Feb 17 15:06:33 2020 -0300
+
+    fixing plotter
+
+[33mcommit 3cfa39fe7ddcb597dd122be9efa501474bba3c61[m
+Author: kaelgabriel <gabrielmoraesbarros@gmail.com>
+Date:   Mon Feb 17 14:13:23 2020 -0300
+
+    fixing gail metrics
+
+[33mcommit a73bb94c803b92bda024b2841a9a14e8657d9aa0[m
+Author: gabriel <gabrielmoraesbarros@gmail.com>
+Date:   Thu Feb 13 15:19:07 2020 -0300
+
+    fixing da logs mahn
+
+[33mcommit 068b363d7542afaff5c4aca742e870f75c07670a[m
+Author: kaelgabriel <gabrielmoraesbarros@gmail.com>
+Date:   Thu Feb 13 13:29:39 2020 -0300
+
+    Fixing minor stuff and gail/save_traj
+
+[33mcommit 8b209837a20a3f3e93d03f35901d783cce9cc376[m
+Author: gabriel <gabrielmoraesbarros@gmail.com>
+Date:   Mon Feb 10 17:12:46 2020 -0300
+
+    fixing save traj
+
+[33mcommit 4209ac0de08b372aa23708b11aef949fa30a7729[m
+Author: gabriel <gabrielmoraesbarros@gmail.com>
+Date:   Mon Feb 10 14:05:28 2020 -0300
+
+    fixing evaluate
+
+[33mcommit abaf7c43cb4e03ee81aecfaf894956a1f2ee171d[m
+Author: kaelgabriel <gabrielmoraesbarros@gmail.com>
+Date:   Mon Feb 10 13:28:52 2020 -0300
+
+    first commit
+
+[33mcommit f44b4444c9db5c1562c5d0bc04080c319ba9141a[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sun Dec 15 16:17:13 2019 -0500
+
+    - fix gail.
+
+[33mcommit 03bf8e2205e2926a058ec9b0d0ae5337405cd322[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sun Oct 13 11:53:03 2019 -0400
+
+    Update README.md
+
+[33mcommit 15b574f5d52f5eeab6917c90c17e8739578f3d96[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Apr 25 18:23:50 2019 -0400
+
+    small fix for cuda.
+
+[33mcommit 07850c3bec50ad6799f26ff29b58663f5de43f3f[m[33m ([m[1;31morigin/dev[m[33m)[m
+Merge: ece414d cd8116a
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Oct 25 22:20:42 2018 -0400
+
+    Merge branch 'master' of https://github.com/Khrylx/PyTorch-RL
+
+[33mcommit ece414d9fda96b36f97e19d0f55898968ba3d09f[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Oct 25 22:20:30 2018 -0400
+
+    stop using adaptive lr.
+
+[33mcommit cd8116acef7f2d5fd8af6627febe621d48ef744e[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Oct 11 18:27:49 2018 -0400
+
+    - fix multiprocessing env issues.
+
+[33mcommit e3f2c31f6e0a66230c3e1e4c71538320cbe07acf[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sun Sep 16 19:24:35 2018 -0400
+
+    fix for original gym
+
+[33mcommit 35e8d48ad0d0dd7e479a4d58491e82c09f49bae4[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Tue Aug 28 19:30:43 2018 -0400
+
+    update readme.
+
+[33mcommit 1973c3e91e2216499016ec7a1bfc1424217abd6c[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sat Aug 25 21:42:59 2018 -0400
+
+    fix bugs for torch0.4
+
+[33mcommit c9fade220f0c4926fae7f04a530ddd3b10864095[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sat Aug 25 18:13:39 2018 -0400
+
+    small fix.
+
+[33mcommit 599a8332cefe257014e6c757664f373eb2f2d4d0[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Fri Aug 24 22:19:15 2018 -0400
+
+    update readme.
+
+[33mcommit b40672c144627f21b7555a532258170b506b2d30[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Fri Aug 24 22:12:44 2018 -0400
+
+    fix gail.
+
+[33mcommit fd55068f93d63fd7ab02c230c3d4cf4489014795[m
+Merge: 9558dea 9be54f0
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Aug 23 23:32:50 2018 -0400
+
+    merge branch 'master' of github.com:Khrylx/PyTorch-RL
+
+[33mcommit 9558dea24f735d5f20900b3021481e459c7b867c[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Aug 23 23:32:47 2018 -0400
+
+    small fix
+
+[33mcommit 9be54f019cc18bdc1254d2e582995bf9fb2aa1fc[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Aug 23 23:32:04 2018 -0400
+
+    fix trpo
+
+[33mcommit 9673a7fb1638915c6c326fe8ac32e472fd35c75c[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Aug 23 23:21:14 2018 -0400
+
+    fix trpo
+
+[33mcommit 81b6290b4bcf0873e41f08705ea96dbca738a70b[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Aug 23 22:24:12 2018 -0400
+
+    small fix.
+
+[33mcommit a01c0fc8f250115f62fd9ec53f4afe84c386c726[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Aug 23 13:44:09 2018 -0400
+
+    added gpu index.
+
+[33mcommit 2fa198e78c39d56554cb63345a09dec993873c14[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Wed Aug 22 23:50:56 2018 -0400
+
+    more refactor for PyTorch 0.4.
+
+[33mcommit 3f72acfd280ad3f0db754b55d60ebeae6a265ed6[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Wed Aug 22 23:07:05 2018 -0400
+
+    change ppo to PyTorch 0.4.
+
+[33mcommit 007d3804e164daf00a724bac24572dd572a31e48[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Wed Aug 22 22:51:01 2018 -0400
+
+    change a2c to PyTorch 0.4.
+
+[33mcommit 3449189124a551f5a12bceb3bc3d5b3a12314e24[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Wed Aug 22 22:41:36 2018 -0400
+
+    change a2c to PyTorch 0.4.
+
+[33mcommit 15afe79471f2b0ddd949ca5502ce0c4e6c18a046[m[33m ([m[1;31morigin/pytorch-0.3[m[33m)[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Fri Jun 8 22:03:57 2018 -0400
+
+    Update README.md
+
+[33mcommit a46d83efe1786b00b7d908329e52c9d20901c25f[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sun Jun 3 14:07:05 2018 -0400
+
+    Update README.md
+
+[33mcommit 554cb405567f53f994e63aa68747e0355b83c353[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sun Apr 29 02:39:30 2018 -0400
+
+    Update gail_gym.py
+
+[33mcommit f2b2b98c38452945b83757bfb47885c35a02bc10[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Fri Apr 27 17:10:55 2018 -0400
+
+    small fix.
+
+[33mcommit 0ba6e803ef42db8fb45426c14ebc7f561dd11944[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Fri Apr 27 14:43:48 2018 -0400
+
+    clean-up cuda cache.
+
+[33mcommit f24a67de3e7690fca126af84837ee9be883d2bd1[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Wed Apr 25 19:07:53 2018 -0400
+
+    Update README.md
+
+[33mcommit 61960d516c85e912e476b41f764a8a5f8cf38cf8[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Mon Apr 2 13:57:18 2018 -0400
+
+    use td-lambda return.
+
+[33mcommit aaaf0f8464e9291aa517861e58e09a4788aedc90[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sun Mar 4 12:39:56 2018 -0500
+
+    fix for disc policy.
+
+[33mcommit a6f76f9fe8e3dee268f5704578693ebf326c8ca9[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Mon Dec 18 09:55:26 2017 -0500
+
+    Update README.md
+
+[33mcommit 20b95d4d182e1c6df488b89d1d13d6d70d80ff61[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Mon Dec 11 23:20:53 2017 -0500
+
+    remove stochasity in agent.
+
+[33mcommit d0b52e3c5afad1f97d5bad2a4dfa0ddf08b9d7fa[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Mon Dec 4 15:50:02 2017 -0500
+
+    Update README.md
+
+[33mcommit 575aa283cade5b5c50c87c0689b2873338dab9a7[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Mon Dec 4 11:02:31 2017 -0500
+
+    fix torch random state for multiprocessing.
+
+[33mcommit 762a9fb5f209565a36646c2c37e9d57e01f90280[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sat Dec 2 02:17:52 2017 -0500
+
+    Update README.md
+
+[33mcommit d66765eecad38ddc3f6e0f33d35ef70a7ed11892[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Sat Dec 2 02:14:27 2017 -0500
+
+    support calculating fisher information matrix explicitly without differentiating the network twice. Faster and better.
+
+[33mcommit 4015cb03943a3474950126bb6d78c837f3b73396[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Fri Dec 1 23:04:45 2017 -0500
+
+    FIM works but is very slow.
+
+[33mcommit 646f08b112bb4aeeb9b1b8d216996907de69803e[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Fri Dec 1 17:11:47 2017 -0500
+
+    working on FIM.
+
+[33mcommit 6bf662314a3e2f0122443666f34984419633583f[m
+Merge: 5ae09a4 28dc840
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Nov 30 23:12:09 2017 -0500
+
+    Merge branch 'master' of https://github.com/Khrylx/PyTorch-RL
+    
+    * 'master' of https://github.com/Khrylx/PyTorch-RL:
+      Update README.md
+
+[33mcommit 5ae09a43dd61c11a472ec9d2997974e2f15fa011[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Thu Nov 30 23:12:05 2017 -0500
+
+    small changes to agent structure.
+
+[33mcommit 28dc840110f3321e65e85df2ab05247c58ad38be[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Wed Nov 29 22:40:27 2017 -0500
+
+    Update README.md
+
+[33mcommit 2809e5b798b86c3809dc6534d56708da1459a0a7[m
+Author: Ye Yuan <khrylx@gmail.com>
+Date:   Wed Nov 29 02:33:03 2017 -0500
+
