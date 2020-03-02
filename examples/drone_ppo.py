@@ -72,6 +72,13 @@ parser.add_argument('--save_path', type=str, \
                     help="path to save model pickle and log file", default='DEFAULT_DIR')
 parser.add_argument('--two-losses', type=int, default=1, choices = [0,1], \
                     help="Whether to use separated losses",)
+parser.add_argument('--scheduler', action='store_true', default=False, \
+                    help="",)
+parser.add_argument('--obs-running-state', type=int, default=1, choices = [0,1],
+                    help="If the observation will be normalized (default: 1, it will be)")
+parser.add_argument('--reward-running-state', type=int, default=0, choices = [0,1],
+                    help="If the reward will be normalized (default: 0, it won't be)")
+
 
 parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
@@ -97,7 +104,21 @@ state_dim = env.observation_space[0]
 # 
 # state_dim = env.observation_space.shape[0]
 is_disc_action = len(env.action_space.shape) == 0
-running_state = ZFilter((state_dim,), clip=5)
+# running_state = ZFilter((state_dim,), clip=5)
+
+if args.obs_running_state == 1:
+    running_state = ZFilter((state_dim,), clip=5)
+
+else:
+    running_state = None
+
+# if args.reward_running_state == 1:
+#     running_reward = ZFilter((1,), demean=False, clip=10)
+# else:
+#     running_reward = None
+
+
+
 # running_reward = ZFilter((1,), demean=False, clip=10)
 """seeding"""
 np.random.seed(args.seed)
@@ -141,7 +162,8 @@ check_dir(save_path)
 
 
 
-def update_params(batch, i_iter):
+def update_params(batch, i_iter,scheduler, scheduler_policy, scheduler_value):
+
     states = torch.from_numpy(np.stack(batch.state)).to(dtype).to(device)
     actions = torch.from_numpy(np.stack(batch.action)).to(dtype).to(device)
     rewards = torch.from_numpy(np.stack(batch.reward)).to(dtype).to(device)
@@ -190,6 +212,7 @@ def update_params(batch, i_iter):
             
             list_value_loss.append(value_loss)
         print('Epoch = {0} | Mean = {1} | STD = {2}'.format(epoc, np.mean(list_value_loss), np.std(list_value_loss)))
+    return policy_surr, value_loss, ev, clipfrac, entropy, approxkl
 
 def main_loop():
 
@@ -198,12 +221,24 @@ def main_loop():
         'min_reward', 'lenght_mean', 'lenght_min','lenght_max','lenght_std', 'sample_time']
         # 'min_reward', 'sample_time', 'action_mean', 'action_min', 'action_max']
 
-    with open(os.path.join(save_path,'progress.csv'), 'w') as outcsv:
-        writer = csv.writer(outcsv, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(list_cols)
-    
-    
+    algo_cols = ['discrim_loss','policy_loss','value_loss','explained_variance', \
+                'clipfrac','entropy','aproxkl']
 
+
+    with open(os.path.join(save_path,'progress.csv'), 'w') as outcsv:  
+        writer = csv.writer(outcsv, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)   
+        writer.writerow(list_cols + algo_cols) 
+
+
+    nupdates = args.max_iter_num  # nupdates = total_timesteps//nbatch
+    if args.scheduler:
+        lr_lambda=lambda f:(1.0 - (f - 1.0) / nupdates)
+    else:
+        lr_lambda=lambda f: 1
+
+    scheduler_value = torch.optim.lr_scheduler.LambdaLR(optimizer_policy, lr_lambda)
+    scheduler_policy = torch.optim.lr_scheduler.LambdaLR(optimizer_value, lr_lambda)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(unique_optimizer, lr_lambda)
 
     begin=time.time()
     for i_iter in range(args.max_iter_num):
@@ -217,7 +252,8 @@ def main_loop():
         batch, log = agent.collect_samples(args.min_batch_size)
         print('Done batching')
         t0 = time.time()
-        update_params(batch, i_iter)
+        loss_policy, loss_value, ev, clipfrac, entropy, approxkl = \
+                    update_params(batch, i_iter, scheduler, scheduler_value, scheduler_policy)
         t1 = time.time()
 
         print("Done updating")
@@ -246,6 +282,11 @@ def main_loop():
         """clean up gpu memory"""
         torch.cuda.empty_cache()
         print('Time so far = {0:.2f} on iter = {1}'.format(time.time()-begin, i_iter))
+
+        scheduler_value.step()
+        scheduler_policy.step()
+        scheduler.step()
+        print(scheduler.get_last_lr())
 
 
 main_loop()
