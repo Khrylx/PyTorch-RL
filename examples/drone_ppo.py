@@ -177,14 +177,16 @@ def update_params(batch, i_iter,scheduler, scheduler_policy, scheduler_value):
     """get advantage estimation from the trajectories"""
     advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
 
-    print('Returns mean = ', returns.mean())
-    print('Returns std = ', returns.std())
-    print('Values mean = ', values.mean())
-    print('Values std = ', values.std())
+    # print('Returns mean = ', returns.mean())
+    # print('Returns std = ', returns.std())
+    # print('Values mean = ', values.mean())
+    # print('Values std = ', values.std())
     
-    print('MSE mean = ', (returns-values).pow(2).mean())
-    print('MSE std = ', (returns-values).pow(2).std())
-    
+    loss_value =  (returns-values).pow(2).mean()
+    print('Loss MSE mean = ', (loss_value))
+    print('Loss std = ', (returns-values).pow(2).std())
+
+    print()    
     """perform mini-batch PPO update"""
     optim_iter_num = int(math.ceil(states.shape[0] / optim_batch_size))
     for epoc in range(optim_epochs):
@@ -202,14 +204,15 @@ def update_params(batch, i_iter,scheduler, scheduler_policy, scheduler_value):
 
             
             if args.two_losses:
-                policy_surr, value_loss, ev, clipfrac, entropy, approxkl = ppo_step_two_losses(policy_net, value_net, \
+                policy_surr, _, ev, clipfrac, entropy, approxkl = ppo_step_two_losses(policy_net, value_net, \
                 optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
                         advantages_b, values_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
             else:
-                policy_surr, value_loss, ev, clipfrac, entropy, approxkl = ppo_step_one_loss(policy_net, value_net, \
+                policy_surr, _, ev, clipfrac, entropy, approxkl = ppo_step_one_loss(policy_net, value_net, \
                 unique_optimizer, 1, states_b, actions_b, returns_b,
                         advantages_b, values_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
-            
+            value_loss = loss_value #code is wrong on ppo step
+
             list_value_loss.append(value_loss)
         print('Epoch = {0} | Mean = {1} | STD = {2}'.format(epoc, np.mean(list_value_loss), np.std(list_value_loss)))
     return policy_surr, value_loss, ev, clipfrac, entropy, approxkl
@@ -256,6 +259,18 @@ def main_loop():
                     update_params(batch, i_iter, scheduler, scheduler_value, scheduler_policy)
         t1 = time.time()
 
+        print()
+        print('Loss_policy = {0:.4f}'.format(loss_policy))
+        print('Loss_value = {0:.4f}'.format(loss_value))
+        print('Explained variance = {0:.3f}'.format(ev))
+        print('clipfrac = {0:.5f}'.format(clipfrac))
+        print('entropy = {0:.5f}'.format(entropy))
+        print('approxkl = {0:.5f}'.format(approxkl))
+        print()
+
+        algo_cols_values = [loss_policy, loss_value, ev, clipfrac, entropy, approxkl]
+
+
         print("Done updating")
         if i_iter % args.log_interval == 0:
             print("LOG KEYS = ", list_cols)
@@ -268,7 +283,7 @@ def main_loop():
             with open(os.path.join(save_path,'progress.csv'), 'a') as csvfile:
                 rew_writer = csv.writer(csvfile, delimiter=';',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                rew_writer.writerow(new_list)
+                rew_writer.writerow(new_list + algo_cols_values)       
 
 
 
