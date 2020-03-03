@@ -17,6 +17,8 @@ from core.agent import Agent
 from larocs_sim.envs.drone_env import DroneEnv
 import csv
 
+from models.mlp_sac_policy import Policy_Tanh_Gaussian
+
 
 def terminate():
     try:
@@ -52,6 +54,8 @@ parser.add_argument('--learning-rate', type=float, default=3e-4, metavar='G',
                     help='learning rate (default: 3e-4)')
 parser.add_argument('--clip-epsilon', type=float, default=0.2, metavar='N',
                     help='clipping epsilon for PPO')
+parser.add_argument('--sac-policy',action='store_true', default=False,
+                    help='use san tanh gaussian')
 parser.add_argument('--optim-epochs', type=int, default=10,
                     help='epochs for the internal optimization')
 parser.add_argument('--optim-batch-size', type=int, default=64,
