@@ -64,8 +64,7 @@ def ppo_step_one_loss(policy_net, value_net, unique_optimizer, optim_value_itern
 
 
 # Two loss 
-def ppo_step_two_losses(policy_net, value_net, optimizer_policy, optimizer_value, scheduler_value, scheduler_policy,
-                        optim_value_iternum, states, actions, \
+def ppo_step_two_losses(policy_net, value_net, optimizer_policy, optimizer_value,optim_value_iternum, states, actions, \
                         returns, advantages,values, fixed_log_probs, clip_epsilon, l2_reg, ent_coef=0.01, clip_value=False):
 
 

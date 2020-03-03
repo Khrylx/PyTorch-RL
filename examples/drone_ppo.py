@@ -82,12 +82,16 @@ parser.add_argument('--obs-running-state', type=int, default=1, choices = [0,1],
                     help="If the observation will be normalized (default: 1, it will be)")
 parser.add_argument('--reward-running-state', type=int, default=0, choices = [0,1],
                     help="If the reward will be normalized (default: 0, it won't be)")
-
-
+parser.add_argument('--reward', type=str, default='Normal',
+                    help="Reward Function")
+parser.add_argument('--state', type=str, default='New', choices = ['New', 'Old', 'New_Double', 'New_Double'],
+                    help="State Space")
 parser.add_argument('--gpu-index', type=int, default=0, metavar='N')
 args = parser.parse_args()
 
 
+if args.env_reset_mode=='False':
+    args.env_reset_mode = False
 
 
 
@@ -99,7 +103,7 @@ if torch.cuda.is_available():
     torch.cuda.set_device(args.gpu_index)
 
 """environment"""
-env = DroneEnv(random=args.env_reset_mode,seed=args.seed)
+env = DroneEnv(random=args.env_reset_mode,seed=args.seed, reward_function_name = args.reward, state=args.state)
 
 
 action_dim = env.action_space.shape[0]
@@ -185,9 +189,10 @@ def update_params(batch, i_iter,scheduler, scheduler_policy, scheduler_value):
     # print('Returns std = ', returns.std())
     # print('Values mean = ', values.mean())
     # print('Values std = ', values.std())
+    with torch.no_grad():
+        loss_value = (returns-values).pow(2).mean()
+    print('Loss MSE mean = ',loss_value)
     
-    loss_value =  (returns-values).pow(2).mean()
-    print('Loss MSE mean = ', (loss_value))
     print('Loss std = ', (returns-values).pow(2).std())
 
     print()    
@@ -208,18 +213,19 @@ def update_params(batch, i_iter,scheduler, scheduler_policy, scheduler_value):
 
             
             if args.two_losses:
-                policy_surr, _, ev, clipfrac, entropy, approxkl = ppo_step_two_losses(policy_net, value_net, \
+                policy_surr, value_loss, ev, clipfrac, entropy, approxkl = ppo_step_two_losses(policy_net, value_net, \
                 optimizer_policy, optimizer_value, 1, states_b, actions_b, returns_b,
                         advantages_b, values_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
+
             else:
-                policy_surr, _, ev, clipfrac, entropy, approxkl = ppo_step_one_loss(policy_net, value_net, \
+                policy_surr, value_loss, ev, clipfrac, entropy, approxkl = ppo_step_one_loss(policy_net, value_net, \
                 unique_optimizer, 1, states_b, actions_b, returns_b,
                         advantages_b, values_b, fixed_log_probs_b, args.clip_epsilon, args.l2_reg)
-            value_loss = loss_value #code is wrong on ppo step
 
             list_value_loss.append(value_loss)
         print('Epoch = {0} | Mean = {1} | STD = {2}'.format(epoc, np.mean(list_value_loss), np.std(list_value_loss)))
-    return policy_surr, value_loss, ev, clipfrac, entropy, approxkl
+    
+    return policy_surr, loss_value.flatten().item(), ev, clipfrac, entropy, approxkl
 
 def main_loop():
 
