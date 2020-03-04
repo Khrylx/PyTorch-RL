@@ -19,25 +19,29 @@ def collect_samples(pid, queue, env, policy, custom_reward,
     max_c_reward = -1e6
     num_episodes = 0
 
-
     lenght_lists=[]
     while num_steps < min_batch_size:
         state = env.reset()
+
+
         if running_state is not None:
             state = running_state(state)
+
         reward_episode = 0
 
         for t in range(250):
-            state_var = tensor(state).unsqueeze(0)
+            state_var = torch.DoubleTensor(state).unsqueeze(0)
             with torch.no_grad():
                 if mean_action:
-                    action = policy.select_action_deterministic.numpy()
+                    action = policy.select_action_deterministic(state_var).flatten().numpy()
+
                 else:
                     action = policy.select_action_stochastic(state_var)[0].numpy()
 
             action = int(action) if policy.is_disc_action else action.astype(np.float64)
 
             next_state, reward, done, _ = env.step(np.clip(action*100,a_min=-100, a_max=100))
+
             reward_episode += reward
             if running_state is not None:
                 next_state = running_state(next_state)

@@ -102,6 +102,7 @@ device = torch.device('cuda', index=args.gpu_index) if torch.cuda.is_available()
 if torch.cuda.is_available():
     torch.cuda.set_device(args.gpu_index)
 
+print(device)
 """environment"""
 env = DroneEnv(random=args.env_reset_mode,seed=args.seed, reward_function_name = args.reward, state=args.state)
 
@@ -137,7 +138,7 @@ if args.model_path is None:
     if is_disc_action:
         policy_net = DiscretePolicy(state_dim, env.action_space.n)
     else:
-        policy_net = Policy(state_dim, env.action_space.shape[0], log_std=args.log_std)
+        policy_net = Policy(state_dim, env.action_space.shape[0],hidden_size=(256,256), activation='tanh', log_std=args.log_std)
     value_net = Value(state_dim, hidden_size=(256,256), activation='relu')
 else:
     policy_net, value_net, running_state,  = pickle.load(open(args.model_path, "rb"))
@@ -162,6 +163,7 @@ agent = Agent(env, policy_net, device, running_state=running_state, render=args.
 
 
 
+
 # Set save/restore paths
 save_path = os.path.join('../checkpoint/', args.save_path) +'/'
 check_dir(save_path)
@@ -180,7 +182,7 @@ def update_params(batch, i_iter,scheduler, scheduler_policy, scheduler_value):
         values = value_net(states)
         fixed_log_probs = policy_net.get_log_prob(states, actions)[0]
 
-    rewards = (rewards - rewards.mean())/(rewards.std() + 1e-10)
+    # rewards = (rewards - rewards.mean())/(rewards.std() + 1e-10)
 
     """get advantage estimation from the trajectories"""
     advantages, returns = estimate_advantages(rewards, masks, values, args.gamma, args.tau, device)
