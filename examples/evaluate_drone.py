@@ -81,17 +81,6 @@ torch.manual_seed(args.seed)
 policy_net, value_net, running_state = pickle.load(open(args.file, "rb"))
 
 
-print(running_state.rs.mean)
-print(running_state.rs.std)
-# for _ in range(10):
-    # state=env.reset()
-    # print(state)
-    # print(running_state(state))
-terminate()
-
-policy_net.to(device)
-value_net.to(device)
-
 
 """create agent"""
 agent = Agent(env, policy_net, device, running_state=running_state, num_threads=1, mean_action=True)

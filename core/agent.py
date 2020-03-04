@@ -33,7 +33,7 @@ def collect_samples(pid, queue, env, policy, custom_reward,
             state_var = torch.DoubleTensor(state).unsqueeze(0)
             with torch.no_grad():
                 if mean_action:
-                    action = policy.select_action_deterministic(state_var).flatten().numpy()
+                    action = np.round(policy.select_action_deterministic(state_var).flatten().numpy(),4)
 
                 else:
                     action = policy.select_action_stochastic(state_var)[0].numpy()
