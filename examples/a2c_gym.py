@@ -36,6 +36,8 @@ parser.add_argument('--seed', type=int, default=1, metavar='N',
                     help='random seed (default: 1)')
 parser.add_argument('--min-batch-size', type=int, default=2048, metavar='N',
                     help='minimal batch size per A2C update (default: 2048)')
+parser.add_argument('--eval-batch-size', type=int, default=2048, metavar='N',
+                    help='minimal batch size for evaluation (default: 2048)')
 parser.add_argument('--max-iter-num', type=int, default=500, metavar='N',
                     help='maximal number of main iterations (default: 500)')
 parser.add_argument('--log-interval', type=int, default=1, metavar='N',
@@ -79,7 +81,7 @@ optimizer_policy = torch.optim.Adam(policy_net.parameters(), lr=0.01)
 optimizer_value = torch.optim.Adam(value_net.parameters(), lr=0.01)
 
 """create agent"""
-agent = Agent(env, policy_net, device, running_state=running_state, render=args.render, num_threads=args.num_threads)
+agent = Agent(env, policy_net, device, running_state=running_state, num_threads=args.num_threads)
 
 
 def update_params(batch):
@@ -100,14 +102,17 @@ def update_params(batch):
 def main_loop():
     for i_iter in range(args.max_iter_num):
         """generate multiple trajectories that reach the minimum batch_size"""
-        batch, log = agent.collect_samples(args.min_batch_size)
+        batch, log = agent.collect_samples(args.min_batch_size, render=args.render)
         t0 = time.time()
         update_params(batch)
         t1 = time.time()
+        """evaluate with determinstic action (remove noise for exploration)"""
+        _, log_eval = agent.collect_samples(args.eval_batch_size, mean_action=True)
+        t2 = time.time()
 
         if i_iter % args.log_interval == 0:
-            print('{}\tT_sample {:.4f}\tT_update {:.4f}\tR_min {:.2f}\tR_max {:.2f}\tR_avg {:.2f}'.format(
-                i_iter, log['sample_time'], t1-t0, log['min_reward'], log['max_reward'], log['avg_reward']))
+            print('{}\tT_sample {:.4f}\tT_update {:.4f}\tT_eval {:.4f}\ttrain_R_min {:.2f}\ttrain_R_max {:.2f}\ttrain_R_avg {:.2f}\teval_R_avg {:.2f}'.format(
+                i_iter, log['sample_time'], t1-t0, t2-t1, log['min_reward'], log['max_reward'], log['avg_reward'], log_eval['avg_reward']))
 
         if args.save_model_interval > 0 and (i_iter+1) % args.save_model_interval == 0:
             to_device(torch.device('cpu'), policy_net, value_net)
