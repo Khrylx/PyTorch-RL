@@ -3,6 +3,8 @@ from utils.replay_memory import Memory
 from utils.torch import *
 import math
 import time
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
 
 
 def collect_samples(pid, queue, env, policy, custom_reward,
